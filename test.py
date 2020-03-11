@@ -4,4 +4,4 @@ import torch.optim as optim
 import argparse
 
 
-from model.Transformer import Transformer
+from model.transformer import Transformer

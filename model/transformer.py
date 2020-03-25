@@ -1,19 +1,22 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
-from encoder import Encoder
-from decoder import Decoder
+from model.encoder import Encoder
+from model.decoder import Decoder
+from model.layers import Embedder, PositionalEncoder
+import copy
 
-class Transformer(nn.Module, encoder, decoder, output_generator, source_embedding, target_embedding):
-    def __init__(self, encoder, decoder, source_vocab, target_vocab, output_generator):
+class Transformer(nn.Module):
+    def __init__(self, encoder, decoder, output_generator, source_embedding, target_embedding):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.source_embedding = source_embedding
         self.target_embedding = target_embedding
         self.output_generator = output_generator
-
     def encode(self, source, source_mask):
+
         return self.encoder(self.source_embedding(source), source_mask)
 
     def decode(self, target, source_mask, target_mask, memory):
@@ -32,9 +35,9 @@ class OutputGenerator(nn.module):
 
 def build_transformer(source_vocab, target_vocab, num_layers=6, num_attention_layers=8, d_model=512, d_ff=2048, dropout=0.1):
     positional_encoder = PositionalEncoder(d_model, dropout)
-    encoder = Encoder(num_layers, num_heads, vocab_size, d_model, d_ff, dropout=dropout)
-    decoder = Decoder(num_layers, num_heads, vocab_size, d_model, d_ff, dropout=dropout)
-    source_embedding = nn.Sequantial(Embeddings(d_model, source_vocab), copy.deepcopy(positional_encoder))
-    target_embedding = nn.Sequantial(Embeddings(d_model, target_vocab), copy.deepcopy(positional_encoder))
+    encoder = Encoder(num_layers, num_attention_layers, vocab_size, d_model, d_ff, dropout=dropout)
+    decoder = Decoder(num_layers, num_attention_layers, vocab_size, d_model, d_ff, dropout=dropout)
+    source_embedding = nn.Sequantial(Embedder(source_vocab, d_model), copy.deepcopy(positional_encoder))
+    target_embedding = nn.Sequantial(Embedder(target_vocab, d_model), copy.deepcopy(positional_encoder))
     generator = OutputGenerator(d_model, target_vocab)
-    return Transformer()
+    return Transformer(encoder,decoder,generator,source_embedding,target_embedding)

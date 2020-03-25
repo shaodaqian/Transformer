@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from sublayers import make_clones, Norm, SublayerConnectionNormalisation, FeedForward
+from model.sublayers import make_clones, Norm, SublayerConnectionNormalisation, FeedForward, MultiHeadAttention
+from model.layers import Embedder, PositionalEncoder
+
 
 class EncoderLayer(nn.Module):
     def __init__(self, d_model, d_ff, num_heads, dropout=0.1):
@@ -12,7 +14,7 @@ class EncoderLayer(nn.Module):
         self.ff = FeedForward(d_model, d_ff, dropout=dropout)
 
     def forward(self, x, encoder_mask):
-        x = self.sublayers[0](x, lambda x: self.attention(x,x,x,mask))
+        x = self.sublayers[0](x, lambda x: self.attention(x,x,x,encoder_mask))
         x = self.sublayers[1](x, lambda x: self.feed_forward)
         return x
 

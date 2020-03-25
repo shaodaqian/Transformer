@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from model.sublayers import make_clones, Norm, SublayerConnectionNormalisation, FeedForward, MultiHeadAttention
+from model.layers import Embedder, PositionalEncoder
+
 
 def decoder_mask(d_model):
     shape_attention = (1, d_model, d_model)
@@ -29,7 +32,7 @@ class Decoder(nn.Module):
         self.num_layers = num_layers
         self.embedding = Embedder(vocab_size, d_model)
         self.positional_encoder = PositionalEncoder(d_model, dropout=dropout)
-        self.norm = Norm(layer.size)
+        self.norm = Norm(d_model)
 
     def forward(self, target, encoder_outputs, source_mask, target_mask):
         x = self.embedding(target)

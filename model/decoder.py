@@ -25,18 +25,14 @@ class DecoderLayer(nn.Module):
         return x
 
 class Decoder(nn.Module):
-    def __init__(self, num_layers, num_heads, vocab_size, d_model, d_ff, dropout):
+    def __init__(self, num_layers, num_heads, d_model, d_ff, dropout):
         super().__init__()
         self.layer = DecoderLayer(d_model, d_ff, num_heads, dropout=dropout)
         self.layers = make_clones(self.layer, num_layers)
         self.num_layers = num_layers
-        self.embedding = Embedder(vocab_size, d_model)
-        self.positional_encoder = PositionalEncoder(d_model, dropout=dropout)
         self.norm = Norm(d_model)
 
     def forward(self, target, encoder_outputs, source_mask, target_mask):
-        x = self.embedding(target)
-        x = self.positional_encoder(x)
         for i in range(self.num_layers):
             x = self.layers[i](x, encoder_outputs, source_mask, target_mask)
         return self.norm(x)

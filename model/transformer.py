@@ -7,6 +7,21 @@ from model.decoder import Decoder
 from model.layers import Embedder, PositionalEncoder
 import copy
 
+
+def src_mask(seq, pad_idx):
+    print(pad_idx)
+    return (seq != pad_idx).unsqueeze(1)
+
+
+def trg_mask(seq,pad_idx):
+    ''' For masking out the subsequent info. '''
+    src=src_mask(seq,pad_idx)
+    sz_b, len_s = seq.size()
+    utri=torch.triu(torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)
+    subsequent_mask = (1 - utri).bool()
+    return src & subsequent_mask
+
+
 class Transformer(nn.Module):
     def __init__(self, encoder, decoder, output_generator, source_embedding, target_embedding):
         super().__init__()
@@ -35,8 +50,8 @@ class OutputGenerator(nn.module):
 
 def build_transformer(source_vocab, target_vocab, num_layers=6, num_attention_layers=8, d_model=512, d_ff=2048, dropout=0.1):
     positional_encoder = PositionalEncoder(d_model, dropout)
-    encoder = Encoder(num_layers, num_attention_layers, vocab_size, d_model, d_ff, dropout=dropout)
-    decoder = Decoder(num_layers, num_attention_layers, vocab_size, d_model, d_ff, dropout=dropout)
+    encoder = Encoder(num_layers, num_attention_layers, d_model, d_ff, dropout=dropout)
+    decoder = Decoder(num_layers, num_attention_layers, d_model, d_ff, dropout=dropout)
     source_embedding = nn.Sequantial(Embedder(source_vocab, d_model), copy.deepcopy(positional_encoder))
     target_embedding = nn.Sequantial(Embedder(target_vocab, d_model), copy.deepcopy(positional_encoder))
     generator = OutputGenerator(d_model, target_vocab)

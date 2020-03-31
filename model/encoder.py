@@ -28,5 +28,5 @@ class Encoder(nn.Module):
 
     def forward(self, source, mask):
         for layer in self.layers:
-            x = layer(x, mask)
-        return self.norm(x)
+            source = layer(source, mask)
+        return self.norm(source)

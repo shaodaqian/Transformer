@@ -41,17 +41,17 @@ class FeedForward(nn.Module):
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, h, d_model, d_k, d_v, dropout=0.1):
+    def __init__(self, h, d_model,dropout=0.1):
         super().__init__()
 
         self.h = h
-        self.d_k = d_k
-        self.d_v = d_v
+        self.d_k = d_model//h
+        self.d_v = self.d_k
 
-        self.w_qs = nn.Linear(d_model, h * d_k, bias=False)
-        self.w_ks = nn.Linear(d_model, h * d_k, bias=False)
-        self.w_vs = nn.Linear(d_model, h * d_v, bias=False)
-        self.fc = nn.Linear(h * d_v, d_model, bias=False)
+        self.w_qs = nn.Linear(d_model, h * self.d_k, bias=False)
+        self.w_ks = nn.Linear(d_model, h * self.d_k, bias=False)
+        self.w_vs = nn.Linear(d_model, h * self.d_v, bias=False)
+        self.fc = nn.Linear(h * self.d_v, d_model, bias=False)
 
         self.dropout = nn.Dropout(dropout)
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)

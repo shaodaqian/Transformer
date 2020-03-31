@@ -18,7 +18,7 @@ class DecoderLayer(nn.Module):
         self.encoder_attention = MultiHeadAttention(num_heads, d_model, dropout=dropout)
         self.ff = FeedForward(d_model, d_ff, dropout=dropout)
 
-    def forward(self, x, encoder_mask, decoder_mask, memory):
+    def forward(self, x,memory, encoder_mask, decoder_mask):
         x = self.sublayers[0](x, lambda x: self.attention(x,x,x,decoder_mask))
         x = self.sublayers[1](x, lambda x: self.encoder_attention(x,memory,memory,encoder_mask))
         x = self.sublayers[2](x, lambda x: self.feed_forward)
@@ -32,7 +32,7 @@ class Decoder(nn.Module):
         self.num_layers = num_layers
         self.norm = Norm(d_model)
 
-    def forward(self, target, encoder_outputs, source_mask, target_mask):
+    def forward(self, x, encoder_outputs, source_mask, target_mask):
         for i in range(self.num_layers):
             x = self.layers[i](x, encoder_outputs, source_mask, target_mask)
         return self.norm(x)

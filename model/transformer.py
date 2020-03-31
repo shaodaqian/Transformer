@@ -23,22 +23,26 @@ def trg_mask(seq,pad_idx):
 
 
 class Transformer(nn.Module):
-    def __init__(self, encoder, decoder, output_generator, source_embedding, target_embedding):
+    def __init__(self, encoder, decoder, output_generator, source_embedding, target_embedding,trg_pad_idx,src_pad_idx):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.source_embedding = source_embedding
         self.target_embedding = target_embedding
         self.output_generator = output_generator
-    def encode(self, source, source_mask):
+        self.trg_pad_idx=trg_pad_idx
+        self.src_pad_idx=src_pad_idx
 
+    def encode(self, source, source_mask):
         return self.encoder(self.source_embedding(source), source_mask)
 
-    def decode(self, target, source_mask, target_mask, memory):
-        return self.decoder(self.target_embedding(target), source_mask, target_mask, memory)
+    def decode(self, target, memory,source_mask, target_mask):
+        return self.decoder(self.target_embedding(target), memory,source_mask, target_mask)
 
-    def forward(self, source, target, source_mask, target_mask):
-        return self.decode(self.encode(source, source_mask), target, source_mask, target_mask)
+    def forward(self, source, target):
+        self.source_mask=src_mask(source,self.scr_pad_idx)
+        self.target_mask=trg_mask(target,self.trg_pad_idx)
+        return self.decode(target,self.encode(source, self.source_mask), self.source_mask, self.target_mask)
 
 class OutputGenerator(nn.module):
     def __init__(self, decoding_output, vocab):
@@ -48,11 +52,12 @@ class OutputGenerator(nn.module):
     def forward(self, x):
         return F.log_softmax(self.projection(x), dim=1)
 
-def build_transformer(source_vocab, target_vocab, num_layers=6, num_attention_layers=8, d_model=512, d_ff=2048, dropout=0.1):
+def build_transformer(source_vocab, target_vocab, trg_pad_idx,src_pad_idx,num_layers=6, num_attention_layers=8, d_model=512, d_ff=2048, dropout=0.1):
+    # we can do a shared vocab here to share the weights for two embeddings and outputgenerator projection
     positional_encoder = PositionalEncoder(d_model, dropout)
     encoder = Encoder(num_layers, num_attention_layers, d_model, d_ff, dropout=dropout)
     decoder = Decoder(num_layers, num_attention_layers, d_model, d_ff, dropout=dropout)
-    source_embedding = nn.Sequantial(Embedder(source_vocab, d_model), copy.deepcopy(positional_encoder))
-    target_embedding = nn.Sequantial(Embedder(target_vocab, d_model), copy.deepcopy(positional_encoder))
+    source_embedding = nn.Sequential(Embedder(source_vocab, d_model,src_pad_idx), copy.deepcopy(positional_encoder))
+    target_embedding = nn.Sequential(Embedder(target_vocab, d_model,trg_pad_idx), copy.deepcopy(positional_encoder))
     generator = OutputGenerator(d_model, target_vocab)
-    return Transformer(encoder,decoder,generator,source_embedding,target_embedding)
+    return Transformer(encoder,decoder,generator,source_embedding,target_embedding,trg_pad_idx,src_pad_idx)

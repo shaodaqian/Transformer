@@ -3,7 +3,7 @@ import urllib.request
 import tarfile
 
 
-DATA_FOLDER = './data'
+DATA_FOLDER = './data/unprocessed'
 
 
 def download_file(response, file_path, file_size):

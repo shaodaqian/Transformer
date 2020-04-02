@@ -11,6 +11,9 @@ def decoder_mask(d_model):
     return torch.from_numpy(decoder_mask) == 0
 
 class DecoderLayer(nn.Module):
+    "A decoder layer is made up of three sublayers."
+    "The first is a multihead self-attention layer, the second one is a multihead source-attention layer,
+    "and the third one is a fully-connected feedforward layer."
     def __init__(self, d_model, d_ff, num_heads, dropout=0.1):
         super().__init__()
         self.sublayers= make_clones(SublayerConnectionNormalisation(d_model, dropout), 3)
@@ -32,7 +35,8 @@ class Decoder(nn.Module):
         self.num_layers = num_layers
         self.norm = Norm(d_model)
 
+    "Pass the input through each decoder layer in turn."
     def forward(self, x, encoder_outputs, source_mask, target_mask):
-        for i in range(self.num_layers):
-            x = self.layers[i](x, encoder_outputs, source_mask, target_mask)
+        for layer in self.layers:
+            x = layer(x, encoder_outputs, source_mask, target_mask)
         return self.norm(x)

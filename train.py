@@ -3,82 +3,172 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import argparse, time
+from tqdm import tqdm
 
-from model.transformer import Transformer
 
-class Batch:
-    def __init__(self, source, target=None, padding=0):
-        self.source = source
-        #just a placeholder for masking, not my task
-        #self.source_mask =
-        if target is not None:
-            self.target = target[:, :-1]
-            self.target_y = target[:, 1:]
-            #placeholder for masking
-            #self.target_mask =
-            self.num_tokens = (self.target_y != padding).data.sum()
+def patch_source(source):
+    source = source.transpose(0, 1)
+    return source
 
-def train_one_epoch(data_iterator, model, loss_function):
-    start = time.time()
-    current_token_count = 0
-    tokens_total = 0
-    loss_total = 0
-    for i, batch in enumerate(data_iterator):
-        output = model.forward(batch.source, batch.target, batch.source_mask, batch.target_mask)
-        loss = loss_function(output, batch.target_y, batch.target_mask)
-        current_token_count = tokens + batch.num_tokens
-        tokens_total = tokens_total + batch.num_tokens
-        loss_total = loss_total + loss
-        if i%100==0:
-            time_elapsed = time.time() - start
-            print("Step: %d Loss: %f Tokens per second: %f Time elapsed: %f" % (i, loss/batch.num_tokens, current_token_count/time_elapsed, time_elapsed))
-            start = time.time()
-            current_token_count = 0
-    return loss_total/tokens_total
 
-class SmoothLabels(nn.Module):
-    # Implements label smoothing.
-    # The aim is to improve accuracy and BLEU score by making the model more unsure.
-    def __init__(self, model_size, padding, smoothing=0.0):
-        super().__init__()
-        self.criterion = nn.KLDivLoss(size_average=False)
-        self.paddding = padding
-        self.confidence = 1 - smoothing
-        self.smoothing = smoothing
-        self.model_size = model_size
+def patch_target(target):
+    target = target.transpose(0, 1)
+    target, gold = target[:, :-1], target[:, 1:].contiguous().view(-1)
+    return target, gold
 
-    def forward(self, x, y):
-        distribution = x.data.close()
-        distribution.fill_(self.smoothing/(self.model_size-2))
-        distribution.scatterr_(1, y.data.unsqueeze(1), self.confidence)
-        distribution[:, self.padding] = 0
-        mask = torch.nonzero(y.dataa==self.padding)
-        if mask.dim()>0:
-            distribution.index_fill_(0, mask.squeeze(), 0.0)
-        self.distribution = distribution
-        return self.criterion(x, Variable(distribution, requires_grad=False))
+def calculate_metrics(prediiction, gold, trg_pad_idx, smoothing=False):
 
-class CustomOptimizer:
-    def __init__(self, d_model, optimizer, factor, warmup_steps):
-        self.current_step = 0
-        self.rate = 0
-        self.optimizer = optimizer
-        self.factor = factor
-        self.warmup = warmup
+    loss = compute_loss(prediction, gold, trg_pad_idx, smoothing=smoothing)
+    prediction = prediction.max(1)[1]
+    gold = gold.contiguous().view(-1)
+    non_pad_mask = gold.ne(trg_pad_idx)
+    num_correct = prediction.eq(gold).masked_select(non_pad_mask).sum().item()
+    num_words = non_pad_mask.sum().item()
 
-    def step(self):
-        self.current_step += 1
-        rate = self.change_learning_rate()
-        for p in self.optimizer.param_groups:
-            p['lr'] = rate
-        self.rate = rate
-        self.optimizer.step()
+    return loss, num_correct, num_words
 
-    def change_learning_rate(self, step=None):
-        if step is None:
-            step = self._step
-        return self.factor * (self.d_model ** (-0.5) * min(step ** (-0.5), step * self.warmup_steps ** (-1.5)))
 
-def get_standard_optimizer(model):
-    #Creates the optimizer mentioned in the paper.
-    return CustomOptimizer(model.source_embedding[0].d_model, 2, 4000, torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
+def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
+    ''' Calculate cross entropy loss, apply label smoothing if needed. '''
+
+    gold = gold.contiguous().view(-1)
+
+    if smoothing:
+        eps = 0.1
+        n_class = prediiction.size(1)
+
+        one_hot = torch.zeros_like(prediiction).scatter(1, gold.view(-1, 1), 1)
+        one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
+        log_prb = F.log_softmax(prediction, dim=1)
+
+        non_pad_mask = gold.ne(trg_pad_idx)
+        loss = -(one_hot * log_prb).sum(dim=1)
+        loss = loss.masked_select(non_pad_mask).sum()  # average later
+    else:
+        loss = F.cross_entropy(predicton, gold, ignore_index=trg_pad_idx, reduction='sum')
+    return loss
+
+
+def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
+    ''' Epoch operation in training phase'''
+
+    model.train()
+    total_loss, total_num_words, total_num_correct_words = 0, 0, 0
+
+    desc = '  - (Training)   '
+    for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
+
+        # prepare data
+        source_sequence = patch_source(batch.src).to(device)
+        target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
+
+        # forward pass
+        optimizer.zero_grad()
+        prediction = model(source_sequence, target_sequence)
+
+        # backward pass and update parameters
+        loss, num_correct, num_words = calculate_metrics(
+            prediction, gold, args.trg_pad_idx, smoothing=smoothing)
+        loss.backward()
+        optimizer.step_and_update_lr()
+
+        # note keeping
+        total_num_words += num_words
+        total_num_correct_words += num_correct
+        total_loss += loss.item()
+
+    loss_per_word = total_loss/total_num_words
+    accuracy = num_correct_words/num_total_words
+    return loss_per_word, accuracy
+
+
+def eval_one_epoch(model, validation_data, device, args):
+    ''' Epoch operation in evaluation phase '''
+
+    model.eval()
+    total_loss, total_num_words, total_num_correct_words = 0, 0, 0
+
+    desc = '  - (Validation) '
+    with torch.no_grad():
+        for batch in tqdm(validation_data, mininterval=2, desc=desc, leave=False):
+
+            # prepare data
+            source_sequence = patch_source(batch.src).to(device)
+            target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
+
+            # forward
+            prediction = model(src_seq, trg_seq)
+            loss, num_correct, num_words = calculate_metrics(
+                prediction, gold, args.trg_pad_idx, smoothing=False)
+
+            # note keeping
+            total_num_words += num_words
+            total_num_correct_words += num_correct
+            total_loss += loss.item()
+
+    loss_per_word = total_loss/total_num_words
+    accuracy = total_num_correct_words/total_num_words
+    return loss_per_word, accuracy
+
+
+def train(model, training_data, validation_data, optimizer, device, args):
+    ''' Start training '''
+
+    log_training_file, log_validation_file = None, None
+
+    "We can optionally log the training and validation processes."
+    if args.log:
+        log_train_file = args.log + '.train.log'
+        log_valid_file = args.log + '.valid.log'
+
+        print('[Info] Training performance will be written to file: {} and {}'.format(
+            log_train_file, log_valid_file))
+
+        with open(log_train_file, 'w') as log_tf, open(log_valid_file, 'w') as log_vf:
+            log_tf.write('epoch,loss,ppl,accuracy\n')
+            log_vf.write('epoch,loss,ppl,accuracy\n')
+
+    "Utility function for printing performance at a given time."
+    def print_performances(header, loss, accu, start_time):
+        print('  - {header:12} ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
+              'elapse: {elapse:3.3f} min'.format(
+                  header=f"({header})", ppl=math.exp(min(loss, 100)),
+                  accu=100*accu, elapse=(time.time()-start_time)/60))
+
+    validation_losses = []
+    for epoch_number in range(args.epoch):
+        print('[ Epoch', epoch_number, ']')
+
+        start_time = time.time()
+        training_loss, training_accuracy = train_epoch(
+            model, training_data, optimizer, args, device, smoothing=args.label_smoothing)
+        print_performances('Training', training_loss, training_accuracy, start_time)
+
+        start = time.time()
+        validation_loss, validation_accuracy = eval_epoch(model, validation_data, device, args)
+        print_performances('Validation', validation_loss, validation_accuracy, start_time)
+
+        validation_losses += [validation_loss]
+
+        checkpoint = {'epoch': epoch_i, 'settings': args, 'model': model.state_dict()}
+
+        "Optionally save the model."
+        if args.save_model:
+            if args.save_mode == 'all':
+                model_name = args.save_model + '_accu_{accu:3.3f}.chkpt'.format(accu=100*valid_accu)
+                torch.save(checkpoint, model_name)
+            elif args.save_mode == 'best':
+                model_name = args.save_model + '.chkpt'
+                if valid_loss <= min(valid_losses):
+                    torch.save(checkpoint, model_name)
+                    print('    - [Info] The checkpoint file has been updated.')
+
+        "Optionally log the training/validation step."
+        if log_train_file and log_valid_file:
+            with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
+                log_tf.write('{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
+                    epoch=epoch_i, loss=train_loss,
+                    ppl=math.exp(min(train_loss, 100)), accu=100*train_accu))
+                log_vf.write('{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
+                    epoch=epoch_i, loss=valid_loss,
+                    ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu))

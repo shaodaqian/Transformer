@@ -7,6 +7,9 @@ from model.layers import Embedder, PositionalEncoder
 
 
 class EncoderLayer(nn.Module):
+    "An encoder layer is made up of two sublayers."
+    "The first is a multihead self-attention layer and the second one is a" 
+    "fully-connected feedforward layer."
     def __init__(self, d_model, d_ff, num_heads, dropout=0.1):
         super().__init__()
         self.sublayers= make_clones(SublayerConnectionNormalisation(d_model, dropout), 2)
@@ -27,6 +30,7 @@ class Encoder(nn.Module):
         self.norm = Norm(d_model)
 
     def forward(self, source, mask):
+        "Pass the input through each encoder layer in turn."
         for layer in self.layers:
             source = layer(source, mask)
         return self.norm(source)

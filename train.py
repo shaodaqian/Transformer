@@ -140,12 +140,12 @@ def train(model, training_data, validation_data, optimizer, device, args):
         print('[ Epoch', epoch_number, ']')
 
         start_time = time.time()
-        training_loss, training_accuracy = train_epoch(
+        training_loss, training_accuracy = train_one_epoch(
             model, training_data, optimizer, args, device, smoothing=args.label_smoothing)
         print_performances('Training', training_loss, training_accuracy, start_time)
 
         start = time.time()
-        validation_loss, validation_accuracy = eval_epoch(model, validation_data, device, args)
+        validation_loss, validation_accuracy = eval_one_epoch(model, validation_data, device, args)
         print_performances('Validation', validation_loss, validation_accuracy, start_time)
 
         validation_losses += [validation_loss]

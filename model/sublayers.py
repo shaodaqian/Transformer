@@ -8,6 +8,7 @@ def  make_clones(layer, num_layers):
     return nn.ModuleList([copy.deepcopy(layer) for _ in range(num_layers)])
 
 class Norm(nn.Module):
+    "A layer normalization module to be used for each sublayer."
     def __init__(self, d_model, eps=1e-6):
         super().__init__()
         self.alpha = nn.Parameter(torch.ones(d_model))
@@ -21,13 +22,14 @@ class Norm(nn.Module):
         return norm
 
 class SublayerConnectionNormalisation(nn.Module):
+    "Sublayer connection consisting of a residual connection and layer normalisation."
     def __init__(self, d_model, dropout):
         super().__init__()
         self.norm = Norm(d_model)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer_function):
-        return x + self.dropout(sublayer_function(self.norm(x)))
+        return self.norm(x + self.dropout(sublayer_function(x))
 
 class FeedForward(nn.Module):
     def __init__(self, d_model, d_ff, dropout=0.1):

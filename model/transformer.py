@@ -44,7 +44,7 @@ class Transformer(nn.Module):
         self.target_mask=trg_mask(target,self.trg_pad_idx)
         return self.decode(target,self.encode(source, self.source_mask), self.source_mask, self.target_mask)
 
-class OutputGenerator(nn.module):
+class OutputGenerator(nn.Module):
     def __init__(self, decoding_output, vocab):
         super().__init__()
         self.projection = nn.Linear(decoding_output, vocab)

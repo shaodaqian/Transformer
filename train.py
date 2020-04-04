@@ -82,3 +82,6 @@ class CustomOptimizer:
 def get_standard_optimizer(model):
     #Creates the optimizer mentioned in the paper.
     return CustomOptimizer(model.source_embedding[0].d_model, 2, 4000, torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
+
+def train(transformer, training_data, validation_data, optimizer, device, args):
+    pass

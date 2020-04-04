@@ -10,7 +10,8 @@ from model.transformer import Transformer,build_transformer
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
 
-from train import train
+from train import train_one_epoch
+
 PAD_WORD = '<blank>'
 UNK_WORD = '<unk>'
 BOS_WORD = '<s>'
@@ -76,7 +77,7 @@ def main():
 
     if not args.log and not args.save_model:
         print('No experiment result will be saved.')
-        raise
+        raise ValueError
 
     if args.batch_size < 2048 and args.warmup_steps <= 4000:
         print('[Warning] The warmup steps may be not enough.\n' \
@@ -91,7 +92,7 @@ def main():
     if args.data_pkl:
         training_data, validation_data = dataloaders(args, device)
     else:
-        raise
+        raise NotADirectoryError(args.data_pkl)
 
     print(args)
     transformer = build_transformer(

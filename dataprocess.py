@@ -4,6 +4,8 @@ from subword_nmt import learn_bpe, apply_bpe
 import sentencepiece
 import re
 import os
+import dill as pickle
+from collections import Counter
 
 
 DATA_FOLDER = './data/processed'
@@ -91,7 +93,56 @@ def get_data(name='train.tok.clean.bpe.32000'):
 
 
 
+def load_vocab(ext):
+    filename = os.path.join(DATA_FOLDER, f'TEST.{ext}')
+    vocab = {}
+    with open(filename, 'rb') as f:
+        for line in f.readlines():
+            token, number = line.split()
+            number = int(number)
+            vocab[token] = number
+    return Counter(vocab)
 
+
+def load_data(name):
+    # Load a list of torchtext.data.Example
+    lines = {'en': [], 'de': []}
+    data = []
+    if name == 'train':
+        for ext in ['en', 'de']:
+            # filename = os.path.join(DATA_FOLDER, f'train.tok.clean.bpe.32000.{ext}')
+            filename = os.path.join(DATA_FOLDER, f'TEST.{ext}')
+            with open(filename, 'r') as f:
+                for line in f.readlines():
+                    lines[ext].append(line)
+        for en, de in zip(lines['en'], lines['de']):
+            data.append(tt.data.Example((en, de)))
+        return data
+    elif name == 'validation':
+        for ext in ['en', 'de']:
+            filename = os.path.join(DATA_FOLDER, f'newstest2014.tok.clean.bpe.32000.{ext}')
+            with open(filename, 'r') as f:
+                for line in f.readlines():
+                    lines[ext].append(line)
+        for en, de in zip(lines['en'], lines['de']):
+            data.append(tt.data.Example((en, de)))
+        return data
+    else:
+        raise ValueError(f'Name {name} not recognised')
+
+
+def save_data():
+    data = {}
+    data['max_len'] = 80
+    data['vocab'] = {
+        'src': load_vocab('en'), 
+        'trg': load_vocab('de'),
+    }
+    data['train'] = load_data('train')
+    data['valid'] = load_data('validation')
+    filename = os.path.join(DATA_FOLDER, 'data')
+    pickle.dump(data, filename)
+    
 
 # en-fr: 32000 word-piece vocab: Google’s neural machine translation system: Bridging the gap between human and machine translation (2016)
 # https://arxiv.org/pdf/1609.08144.pdf

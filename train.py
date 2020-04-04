@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import argparse, time
 from tqdm import tqdm
+import math
 
 
 def patch_source(source):
@@ -35,9 +36,9 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
 
     if smoothing:
         eps = 0.1
-        n_class = prediiction.size(1)
+        n_class = prediction.size(1)
 
-        one_hot = torch.zeros_like(prediiction).scatter(1, gold.view(-1, 1), 1)
+        one_hot = torch.zeros_like(prediction).scatter(1, gold.view(-1, 1), 1)
         one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
         log_prb = F.log_softmax(prediction, dim=1)
 
@@ -45,7 +46,7 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
         loss = -(one_hot * log_prb).sum(dim=1)
         loss = loss.masked_select(non_pad_mask).sum()  # average later
     else:
-        loss = F.cross_entropy(predicton, gold, ignore_index=trg_pad_idx, reduction='sum')
+        loss = F.cross_entropy(prediction, gold, ignore_index=trg_pad_idx, reduction='sum')
     return loss
 
 
@@ -78,7 +79,7 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
         total_loss += loss.item()
 
     loss_per_word = total_loss/total_num_words
-    accuracy = num_correct_words/num_total_words
+    accuracy = total_num_correct_words / total_num_words
     return loss_per_word, accuracy
 
 
@@ -97,7 +98,7 @@ def eval_one_epoch(model, validation_data, device, args):
             target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
 
             # forward
-            prediction = model(src_seq, trg_seq)
+            prediction = model(source_sequence, target_sequence)
             loss, num_correct, num_words = calculate_metrics(
                 prediction, gold, args.trg_pad_idx, smoothing=False)
 
@@ -114,7 +115,7 @@ def eval_one_epoch(model, validation_data, device, args):
 def train(model, training_data, validation_data, optimizer, device, args):
     ''' Start training '''
 
-    log_training_file, log_validation_file = None, None
+    log_train_file, log_valid_file = None, None
 
     "We can optionally log the training and validation processes."
     if args.log:
@@ -138,28 +139,29 @@ def train(model, training_data, validation_data, optimizer, device, args):
     validation_losses = []
     for epoch_number in range(args.epoch):
         print('[ Epoch', epoch_number, ']')
-
         start_time = time.time()
-        training_loss, training_accuracy = train_epoch(
-            model, training_data, optimizer, args, device, smoothing=args.label_smoothing)
+        training_loss, training_accuracy = train_one_epoch(
+            model,
+            training_data,
+            optimizer,
+            args,
+            device,
+            smoothing=args.label_smoothing
+        )
         print_performances('Training', training_loss, training_accuracy, start_time)
-
-        start = time.time()
-        validation_loss, validation_accuracy = eval_epoch(model, validation_data, device, args)
+        # start = time.time()
+        validation_loss, validation_accuracy = train_one_epoch(model, validation_data, optimizer, args, device, smoothing=args.label_smoothing)
         print_performances('Validation', validation_loss, validation_accuracy, start_time)
-
         validation_losses += [validation_loss]
-
-        checkpoint = {'epoch': epoch_i, 'settings': args, 'model': model.state_dict()}
-
+        checkpoint = {'epoch': epoch_number, 'settings': args, 'model': model.state_dict()}
         "Optionally save the model."
         if args.save_model:
             if args.save_mode == 'all':
-                model_name = args.save_model + '_accu_{accu:3.3f}.chkpt'.format(accu=100*valid_accu)
+                model_name = args.save_model + '_accu_{accu:3.3f}.chkpt'.format(accu=100*validation_accuracy)
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
                 model_name = args.save_model + '.chkpt'
-                if valid_loss <= min(valid_losses):
+                if validation_loss <= min(validation_losses):
                     torch.save(checkpoint, model_name)
                     print('    - [Info] The checkpoint file has been updated.')
 
@@ -167,8 +169,8 @@ def train(model, training_data, validation_data, optimizer, device, args):
         if log_train_file and log_valid_file:
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
                 log_tf.write('{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
-                    epoch=epoch_i, loss=train_loss,
-                    ppl=math.exp(min(train_loss, 100)), accu=100*train_accu))
+                    epoch=epoch_number, loss=training_loss,
+                    ppl=math.exp(min(training_loss, 100)), accu=100*training_accuracy))
                 log_vf.write('{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
-                    epoch=epoch_i, loss=valid_loss,
-                    ppl=math.exp(min(valid_loss, 100)), accu=100*valid_accu))
+                    epoch=epoch_number, loss=validation_loss,
+                    ppl=math.exp(min(validation_loss, 100)), accu=100*validation_accuracy))

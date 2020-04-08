@@ -40,7 +40,7 @@ class Transformer(nn.Module):
         return self.decoder(self.target_embedding(target), memory, source_mask, target_mask)
 
     def forward(self, source, target):
-        self.source_mask=src_mask(source,self.scr_pad_idx)
+        self.source_mask=src_mask(source,self.src_pad_idx)
         self.target_mask=trg_mask(target,self.trg_pad_idx)
         return self.decode(target,self.encode(source, self.source_mask), self.source_mask, self.target_mask)
 
@@ -60,7 +60,7 @@ def build_transformer(source_vocab, target_vocab, trg_pad_idx,src_pad_idx,num_la
     source_embedding = nn.Sequential(Embedder(source_vocab, d_model,src_pad_idx), copy.deepcopy(positional_encoder))
     target_embedding = nn.Sequential(Embedder(target_vocab, d_model,trg_pad_idx), copy.deepcopy(positional_encoder))
     generator = OutputGenerator(d_model, target_vocab)
-    model = Transformer(encoder,decoder,generator,source_embedding,target_embedding,trg_pad_idx,src_pad_idx
+    model = Transformer(encoder,decoder,generator,source_embedding,target_embedding,trg_pad_idx,src_pad_idx)
     for p in model.parameters():
         if p.dim() > 1:
             nn.init.xavier_uniform(p)

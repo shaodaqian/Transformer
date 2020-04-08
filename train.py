@@ -17,21 +17,19 @@ def patch_target(target):
     target, gold = target[:, :-1], target[:, 1:].contiguous().view(-1)
     return target, gold
 
-def calculate_metrics(prediction, gold, trg_pad_idx, smoothing=False):
 
+def calculate_metrics(prediction, gold, trg_pad_idx, smoothing=False):
     loss = compute_loss(prediction, gold, trg_pad_idx, smoothing=smoothing)
     prediction = prediction.max(1)[1]
     gold = gold.contiguous().view(-1)
     non_pad_mask = gold.ne(trg_pad_idx)
     num_correct = prediction.eq(gold).masked_select(non_pad_mask).sum().item()
     num_words = non_pad_mask.sum().item()
-
     return loss, num_correct, num_words
 
 
 def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
-
     gold = gold.contiguous().view(-1)
 
     if smoothing:
@@ -52,10 +50,8 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
 
 def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
     ''' Epoch operation in training phase'''
-
     model.train()
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0
-
     desc = '  - (Training)   '
     for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
 
@@ -85,7 +81,6 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
 
 def eval_one_epoch(model, validation_data, device, args):
     ''' Epoch operation in evaluation phase '''
-
     model.eval()
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0
 
@@ -112,7 +107,7 @@ def eval_one_epoch(model, validation_data, device, args):
     return loss_per_word, accuracy
 
 
-def train(model, training_data, validation_data, optimizer, device, args):
+def train(model, training_data, validation_data, optimizer, args, device):
     ''' Start training '''
 
     log_train_file, log_valid_file = None, None
@@ -150,7 +145,12 @@ def train(model, training_data, validation_data, optimizer, device, args):
         )
         print_performances('Training', training_loss, training_accuracy, start_time)
         # start = time.time()
-        validation_loss, validation_accuracy = train_one_epoch(model, validation_data, optimizer, args, device, smoothing=args.label_smoothing)
+        validation_loss, validation_accuracy = eval_one_epoch(
+            model,
+            validation_data,
+            args,
+            device
+        )
         print_performances('Validation', validation_loss, validation_accuracy, start_time)
         validation_losses += [validation_loss]
         checkpoint = {'epoch': epoch_number, 'settings': args, 'model': model.state_dict()}

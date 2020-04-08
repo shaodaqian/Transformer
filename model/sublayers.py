@@ -21,6 +21,7 @@ class Norm(nn.Module):
         norm = self.alpha * (x-mean) / (std + self.eps) + self.bias
         return norm
 
+
 class SublayerConnectionNormalisation(nn.Module):
     "Sublayer connection consisting of a residual connection and layer normalisation."
     def __init__(self, d_model, dropout):
@@ -29,7 +30,8 @@ class SublayerConnectionNormalisation(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer_function):
-        return self.norm(x + self.dropout(sublayer_function(x))
+        return self.norm(x + self.dropout(sublayer_function(x)))
+
 
 class FeedForward(nn.Module):
     def __init__(self, d_model, d_ff, dropout=0.1):
@@ -39,7 +41,7 @@ class FeedForward(nn.Module):
          self.linear_2 = nn.Linear(d_ff, d_model)
 
     def forward(self, x):
-        return self.linear_2(self.dropoutt(F.relu(self.linear_1(x))))
+        return self.linear_2(self.dropout(F.relu(self.linear_1(x))))
 
 
 class MultiHeadAttention(nn.Module):

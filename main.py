@@ -6,11 +6,12 @@ import dill as pickle
 from tqdm import tqdm
 import torch.optim as optim
 
-from model.transformer import Transformer,build_transformer
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
+from model.transformer import build_transformer
+from dataprocess import load_data_dict
 
-from train import train_one_epoch
+from train import train
 
 PAD_WORD = '<blank>'
 UNK_WORD = '<unk>'
@@ -19,28 +20,29 @@ EOS_WORD = '</s>'
 
 def dataloaders(opt, device):
     batch_size = opt.batch_size
-    data = pickle.load(open(opt.data_pkl, 'rb'))
+    data = load_data_dict()
 
-    opt.max_token_seq_len = data['settings'].max_len
-    opt.src_pad_idx = data['vocab']['src'].vocab.stoi[PAD_WORD]
-    opt.trg_pad_idx = data['vocab']['trg'].vocab.stoi[PAD_WORD]
+    opt.max_token_seq_len = data['max_len']
+    opt.src_pad_idx = data['fields']['src'].vocab.stoi[PAD_WORD]
+    opt.trg_pad_idx = data['fields']['trg'].vocab.stoi[PAD_WORD]
 
-    opt.src_vocab_size = len(data['vocab']['src'].vocab)
-    opt.trg_vocab_size = len(data['vocab']['trg'].vocab)
+    opt.src_vocab_size = len(data['fields']['src'].vocab)
+    opt.trg_vocab_size = len(data['fields']['trg'].vocab)
 
     # if opt.embs_share_weight:
     #     assert data['vocab']['src'].vocab.stoi == data['vocab']['trg'].vocab.stoi, \
     #         'To sharing word embedding the src/trg word2idx table shall be the same.'
 
-    fields = {'src': data['vocab']['src'], 'trg':data['vocab']['trg']}
+    # fields = {'src': data['vocab']['src'], 'trg':data['vocab']['trg']}
 
-    train = Dataset(examples=data['train'], fields=fields)
-    val = Dataset(examples=data['valid'], fields=fields)
+    train = data['train']
+    val = data['valid']
 
     train_iterator = BucketIterator(train, batch_size=batch_size, device=device, train=True)
     val_iterator = BucketIterator(val, batch_size=batch_size, device=device)
 
     return train_iterator, val_iterator
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -108,9 +110,16 @@ def main():
     ).to(device)
 
     optimizer = ScheduledOptim(
-        optim.Adam(transformer.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-09),2.0, args.d_model, args.warmup_steps)
+        optim.Adam(transformer.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-09), 2.0, args.d_model, args.warmup_steps)
 
-    train(transformer, training_data, validation_data, optimizer, device, args)
+    train(
+        transformer,
+        training_data=training_data,
+        validation_data=validation_data,
+        optimizer=optimizer,
+        device=device,
+        args=args
+    )
 
 if __name__ == "__main__":
     main()

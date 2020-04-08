@@ -77,16 +77,12 @@ def subword(en, de, merge_ops=32000):
 
 
 
-def get_data(name='train.tok.clean.bpe.32000'):
-    field = tt.data.Field(
-        tokenize=str.split,
-        lower=True,
-    )
-    fields = (field, field)
+def load_data(name, src_field, trg_field):
+    fields = (src_field, trg_field)
     path = os.path.join(DATA_FOLDER, name)
     train_data = tt.datasets.TranslationDataset(
         path=path,
-        exts=('en', 'de'),
+        exts=('.en', '.de'),
         fields=fields
     )
     return train_data
@@ -94,9 +90,9 @@ def get_data(name='train.tok.clean.bpe.32000'):
 
 
 def load_vocab(ext):
-    filename = os.path.join(DATA_FOLDER, f'TEST.{ext}')
+    filename = os.path.join(DATA_FOLDER, f'vocab.50k.{ext}')
     vocab = {}
-    with open(filename, 'rb') as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         for line in f.readlines():
             token, number = line.split()
             number = int(number)
@@ -104,50 +100,33 @@ def load_vocab(ext):
     return Counter(vocab)
 
 
-def load_data(name):
-    # Load a list of torchtext.data.Example
-    lines = {'en': [], 'de': []}
-    data = []
-    if name == 'train':
-        for ext in ['en', 'de']:
-            # filename = os.path.join(DATA_FOLDER, f'train.tok.clean.bpe.32000.{ext}')
-            filename = os.path.join(DATA_FOLDER, f'TEST.{ext}')
-            with open(filename, 'r') as f:
-                for line in f.readlines():
-                    lines[ext].append(line)
-        for en, de in zip(lines['en'], lines['de']):
-            data.append(tt.data.Example((en, de)))
-        return data
-    elif name == 'validation':
-        for ext in ['en', 'de']:
-            filename = os.path.join(DATA_FOLDER, f'newstest2014.tok.clean.bpe.32000.{ext}')
-            with open(filename, 'r') as f:
-                for line in f.readlines():
-                    lines[ext].append(line)
-        for en, de in zip(lines['en'], lines['de']):
-            data.append(tt.data.Example((en, de)))
-        return data
-    else:
-        raise ValueError(f'Name {name} not recognised')
-
-
-def save_data():
+def load_data_dict():
     data = {}
     data['max_len'] = 80
-    data['vocab'] = {
-        'src': load_vocab('en'), 
-        'trg': load_vocab('de'),
+    en_vocab = load_vocab('en')
+    de_vocab = load_vocab('de')
+    src_field = tt.data.Field(
+        tokenize=str.split,
+        lower=True,
+    )
+    trg_field = tt.data.Field(
+        tokenize=str.split,
+        lower=True,
+    )
+    src_field.build_vocab(en_vocab)
+    trg_field.build_vocab(de_vocab)
+    data['fields'] = {
+        'src': src_field,
+        'trg': trg_field,
     }
-    data['train'] = load_data('train')
-    data['valid'] = load_data('validation')
-    filename = os.path.join(DATA_FOLDER, 'data')
-    pickle.dump(data, filename)
-    
+    data['train'] = load_data('TEST', src_field, trg_field)
+    data['valid'] = load_data('TEST', src_field, trg_field)
+    # data['valid'] = load_data('newstest2014.tok.clean.bpe.32000', src_field, trg_field)
+    return data
 
 # en-fr: 32000 word-piece vocab: Google’s neural machine translation system: Bridging the gap between human and machine translation (2016)
 # https://arxiv.org/pdf/1609.08144.pdf
 
 # Use sentencepiece
-
 
 

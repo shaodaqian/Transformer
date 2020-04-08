@@ -14,11 +14,11 @@ class EncoderLayer(nn.Module):
         super().__init__()
         self.sublayers= make_clones(SublayerConnectionNormalisation(d_model, dropout), 2)
         self.attention = MultiHeadAttention(num_heads, d_model, dropout=dropout)
-        self.ff = FeedForward(d_model, d_ff, dropout=dropout)
+        self.feed_forward = FeedForward(d_model, d_ff, dropout=dropout)
 
     def forward(self, x, encoder_mask):
         x = self.sublayers[0](x, lambda x: self.attention(x,x,x,encoder_mask))
-        x = self.sublayers[1](x, lambda x: self.feed_forward)
+        x = self.sublayers[1](x, lambda x: self.feed_forward.forward(x))
         return x
 
 class Encoder(nn.Module):

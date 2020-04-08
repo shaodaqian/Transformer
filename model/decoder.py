@@ -12,7 +12,7 @@ def decoder_mask(d_model):
 
 class DecoderLayer(nn.Module):
     "A decoder layer is made up of three sublayers."
-    "The first is a multihead self-attention layer, the second one is a multihead source-attention layer,
+    "The first is a multihead self-attention layer, the second one is a multihead source-attention layer"
     "and the third one is a fully-connected feedforward layer."
     def __init__(self, d_model, d_ff, num_heads, dropout=0.1):
         super().__init__()

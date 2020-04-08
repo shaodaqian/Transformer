@@ -54,7 +54,6 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0
     desc = '  - (Training)   '
     for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
-
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))

@@ -62,6 +62,6 @@ def build_transformer(source_vocab, target_vocab, trg_pad_idx,src_pad_idx,num_la
     generator = OutputGenerator(d_model, target_vocab)
     model = Transformer(encoder,decoder,generator,source_embedding,target_embedding,trg_pad_idx,src_pad_idx)
     for p in model.parameters():
-        if p.dim() > 1:
+        if p.dim()>1:
             nn.init.xavier_uniform(p)
     return model

@@ -32,7 +32,6 @@ class SublayerConnectionNormalisation(nn.Module):
     def forward(self, x, sublayer_function):
         return self.norm(x + self.dropout(sublayer_function(x)))
 
-
 class FeedForward(nn.Module):
     def __init__(self, d_model, d_ff, dropout=0.1):
          super().__init__()

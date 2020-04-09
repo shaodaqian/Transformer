@@ -10,6 +10,7 @@ def decoder_mask(d_model):
     decoder_mask = np.triu(np.ones(shape_attention), k=1).astype('uint8')
     return torch.from_numpy(decoder_mask) == 0
 
+
 class DecoderLayer(nn.Module):
     "A decoder layer is made up of three sublayers."
     "The first is a multihead self-attention layer, the second one is a multihead source-attention layer"
@@ -19,13 +20,14 @@ class DecoderLayer(nn.Module):
         self.sublayers= make_clones(SublayerConnectionNormalisation(d_model, dropout), 3)
         self.attention = MultiHeadAttention(num_heads, d_model, dropout=dropout)
         self.encoder_attention = MultiHeadAttention(num_heads, d_model, dropout=dropout)
-        self.ff = FeedForward(d_model, d_ff, dropout=dropout)
+        self.feed_forward = FeedForward(d_model, d_ff, dropout=dropout)
 
     def forward(self, x,memory, encoder_mask, decoder_mask):
-        x = self.sublayers[0](x, lambda x: self.attention(x,x,x,decoder_mask))
-        x = self.sublayers[1](x, lambda x: self.encoder_attention(x,memory,memory,encoder_mask))
-        x = self.sublayers[2](x, lambda x: self.feed_forward)
+        x = self.sublayers[0](x, lambda y: self.attention(y,y,y,decoder_mask))
+        x = self.sublayers[1](x, lambda y: self.encoder_attention(y,memory,memory,encoder_mask))
+        x = self.sublayers[2](x, lambda y: self.feed_forward(y))
         return x
+
 
 class Decoder(nn.Module):
     def __init__(self, num_layers, num_heads, d_model, d_ff, dropout):

@@ -5,6 +5,8 @@ import numpy as np
 from model.sublayers import make_clones, Norm, SublayerConnectionNormalisation, FeedForward, MultiHeadAttention
 from model.layers import Embedder, PositionalEncoder
 
+from pytorch_memlab import profile
+
 
 class EncoderLayer(nn.Module):
     "An encoder layer is made up of two sublayers."
@@ -17,9 +19,10 @@ class EncoderLayer(nn.Module):
         self.feed_forward = FeedForward(d_model, d_ff, dropout=dropout)
 
     def forward(self, x, encoder_mask):
-        x = self.sublayers[0](x, lambda x: self.attention(x,x,x,encoder_mask))
-        x = self.sublayers[1](x, lambda x: self.feed_forward.forward(x))
+        x = self.sublayers[0](x, lambda y: self.attention(y,y,y,encoder_mask))
+        x = self.sublayers[1](x, lambda y: self.feed_forward(y))
         return x
+
 
 class Encoder(nn.Module):
     def __init__(self, num_layers, num_heads, d_model, d_ff, dropout):

@@ -14,7 +14,7 @@ def patch_source(source):
 
 def patch_target(target):
     target = target.transpose(0, 1)
-    target, gold = target[:, :-1], target[:, 1:].contiguous().view(-1)
+    target, gold = target[:, :-1], target[:, 1:]
     return target, gold
 
 
@@ -30,16 +30,13 @@ def calculate_metrics(prediction, gold, trg_pad_idx, smoothing=False):
 
 def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
-    gold = gold.contiguous().view(-1)
-
+    # gold = gold.contiguous().view(-1)
     if smoothing:
         eps = 0.1
         n_class = prediction.size(1)
-
         one_hot = torch.zeros_like(prediction).scatter(1, gold.view(-1, 1), 1)
         one_hot = one_hot * (1 - eps) + (1 - one_hot) * eps / (n_class - 1)
         log_prb = F.log_softmax(prediction, dim=1)
-
         non_pad_mask = gold.ne(trg_pad_idx)
         loss = -(one_hot * log_prb).sum(dim=1)
         loss = loss.masked_select(non_pad_mask).sum()  # average later
@@ -57,22 +54,19 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
-
         # forward pass
         optimizer.zero_grad()
         prediction = model(source_sequence, target_sequence)
-
         # backward pass and update parameters
         loss, num_correct, num_words = calculate_metrics(
-            prediction, gold, args.trg_pad_idx, smoothing=smoothing)
+            prediction, gold, args.trg_pad_idx, smoothing=smoothing
+        )
         loss.backward()
         optimizer.step_and_update_lr()
-
         # note keeping
         total_num_words += num_words
         total_num_correct_words += num_correct
         total_loss += loss.item()
-
     loss_per_word = total_loss/total_num_words
     accuracy = total_num_correct_words / total_num_words
     return loss_per_word, accuracy
@@ -82,20 +76,19 @@ def eval_one_epoch(model, validation_data, device, args):
     ''' Epoch operation in evaluation phase '''
     model.eval()
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0
-
     desc = '  - (Validation) '
     with torch.no_grad():
         for batch in tqdm(validation_data, mininterval=2, desc=desc, leave=False):
-
             # prepare data
+            # source_sequence = patch_source(batch.src).to(device)
+            # target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
             source_sequence = patch_source(batch.src).to(device)
             target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
-
             # forward
             prediction = model(source_sequence, target_sequence)
             loss, num_correct, num_words = calculate_metrics(
-                prediction, gold, args.trg_pad_idx, smoothing=False)
-
+                prediction, gold, args.trg_pad_idx, smoothing=False
+            )
             # note keeping
             total_num_words += num_words
             total_num_correct_words += num_correct
@@ -108,17 +101,13 @@ def eval_one_epoch(model, validation_data, device, args):
 
 def train(model, training_data, validation_data, optimizer, args, device):
     ''' Start training '''
-
     log_train_file, log_valid_file = None, None
-
     "We can optionally log the training and validation processes."
     if args.log:
         log_train_file = args.log + '.train.log'
         log_valid_file = args.log + '.valid.log'
-
         print('[Info] Training performance will be written to file: {} and {}'.format(
             log_train_file, log_valid_file))
-
         with open(log_train_file, 'w') as log_tf, open(log_valid_file, 'w') as log_vf:
             log_tf.write('epoch,loss,ppl,accuracy\n')
             log_vf.write('epoch,loss,ppl,accuracy\n')

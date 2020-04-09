@@ -7,8 +7,12 @@ import os
 import dill as pickle
 from collections import Counter
 
+from pytorch_memlab import profile
+
+from special_tokens import PAD_WORD, UNK_WORD, EOS_WORD, BOS_WORD
 
 DATA_FOLDER = './data/processed'
+
 
 def tokenize(lang, corpus):
     if lang == 'en' or lang == 'de':
@@ -20,14 +24,13 @@ def tokenize(lang, corpus):
         raise ValueError()
 
 
-# Cleaning the corpus
 def clean_corpus(en, de):
     en, de = remove_empty_lines(en, de)
     en, de = remove_redundant_spaces(en, de)
     en, de = drop_lines(en, de)
     return en, de
 
-# removes empty lines
+
 def remove_empty_lines(en, de):
     cleaned_en = []
     cleaned_de = []
@@ -38,7 +41,6 @@ def remove_empty_lines(en, de):
     return cleaned_en, cleaned_de
 
 
-# removes redundant space characters
 def remove_redundant_spaces(en, de):
     regex = r' +' # 1 or more spaces
     en = [re.sub(regex, ' ', l1) for l1 in en]
@@ -65,28 +67,24 @@ def drop_lines(en, de, min_length=1, max_length=80):
     return en_dropped, de_dropped
 
 
-# bpe
-def subword(en, de, merge_ops=32000):
+# Byte-pair encoding (aka subword)
+def subword(en, de, args, merge_ops=32000):
     concatenated = en + de
     print('Learning BPE encoding. This may take a while.')
     outfile_name = os.path.join(DATA_FOLDER, f'bpe.{merge_ops}')
     learn_bpe.learn_bpe(concatenated, outfile_name, num_symbols=merge_ops)
-    # Currently unfinished
-    # bpe = apply_bpe.BPE(args.codes, , args.separator, None)
-    return None
+    bpe = apply_bpe.BPE(args.codes, args.separator, None)
+    return bpe
 
 
-
-def load_data(name, src_field, trg_field):
-    fields = (src_field, trg_field)
+def load_data(name, fields):
     path = os.path.join(DATA_FOLDER, name)
-    train_data = tt.datasets.TranslationDataset(
+    data = tt.datasets.TranslationDataset(
         path=path,
         exts=('.en', '.de'),
         fields=fields
     )
-    return train_data
-
+    return data
 
 
 def load_vocab(ext):
@@ -103,24 +101,20 @@ def load_vocab(ext):
 def load_data_dict():
     data = {}
     data['max_len'] = 80
-    en_vocab = load_vocab('en')
-    de_vocab = load_vocab('de')
-    src_field = tt.data.Field(
+    field = tt.data.Field(
         tokenize=str.split,
         lower=True,
+        pad_token=PAD_WORD,
+        unk_token=UNK_WORD,
+        eos_token=EOS_WORD,
     )
-    trg_field = tt.data.Field(
-        tokenize=str.split,
-        lower=True,
-    )
-    src_field.build_vocab(en_vocab)
-    trg_field.build_vocab(de_vocab)
-    data['fields'] = {
-        'src': src_field,
-        'trg': trg_field,
-    }
-    data['train'] = load_data('TEST', src_field, trg_field)
-    data['valid'] = load_data('TEST', src_field, trg_field)
+    fields = (field, field)
+    data['train'] = load_data('TEST', fields)
+    from itertools import chain
+    field.build_vocab(chain(data['train'].src, data['train'].trg))
+    data['fields'] = fields
+    data['valid'] = load_data('TEST', fields)
+
     # data['valid'] = load_data('newstest2014.tok.clean.bpe.32000', src_field, trg_field)
     return data
 

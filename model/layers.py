@@ -26,9 +26,9 @@ class PositionalEncoder(nn.Module):
 
 
 class Embedder(nn.Module):
-    def __init__(self,vocab,d_model,mask=None):
+    def __init__(self, vocab, d_model, mask=None):
         super(Embedder, self).__init__()
-        self.emb = nn.Embedding(vocab, d_model,mask)
+        self.emb = nn.Embedding(vocab, d_model, mask)
         self.d_model = d_model
 
     def forward(self, x):

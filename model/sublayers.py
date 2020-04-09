@@ -4,8 +4,12 @@ import torch.nn.functional as F
 import copy
 import math
 
+from pytorch_memlab import profile
+
+
 def  make_clones(layer, num_layers):
     return nn.ModuleList([copy.deepcopy(layer) for _ in range(num_layers)])
+
 
 class Norm(nn.Module):
     "A layer normalization module to be used for each sublayer."
@@ -32,6 +36,7 @@ class SublayerConnectionNormalisation(nn.Module):
     def forward(self, x, sublayer_function):
         return self.norm(x + self.dropout(sublayer_function(x)))
 
+
 class FeedForward(nn.Module):
     def __init__(self, d_model, d_ff, dropout=0.1):
          super().__init__()
@@ -40,13 +45,15 @@ class FeedForward(nn.Module):
          self.linear_2 = nn.Linear(d_ff, d_model)
 
     def forward(self, x):
-        return self.linear_2(self.dropout(F.relu(self.linear_1(x))))
+        x = self.linear_1(x)
+        x = F.relu(x)
+        x = self.dropout(x)
+        return self.linear_2(x)
 
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, h, d_model,dropout=0.1):
+    def __init__(self, h, d_model, dropout=0.1):
         super().__init__()
-
         self.h = h
         self.d_k = d_model//h
         self.d_v = self.d_k
@@ -60,7 +67,7 @@ class MultiHeadAttention(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model, eps=1e-6)
 
 
-    def attention(self,q,k,v, mask=None):
+    def attention(self, q, k, v, mask=None):
         # q(b*head*lenq*d_k)  k_t(b*head*d_k*lenk)
         score = torch.matmul(q / math.sqrt(self.d_k), k.transpose(2, 3))
         # score(b*head*lenq*lenk)
@@ -73,22 +80,18 @@ class MultiHeadAttention(nn.Module):
         # output(b*head*lenk*d_v)
         return output, attn
 
-    def forward(self,q,k,v,mask=None):
-        d_k, d_v, h = self.d_k, self.d_v, self.h
-        sz_b= q.size(0)
-
+    def forward(self, q, k, v, mask=None):
+        sz_b = q.size(0)
         # Separate different heads: b x lq x n x dv
-        q = self.w_qs(q).view(sz_b, -1, h, d_k)
-        k = self.w_ks(k).view(sz_b, -1, h, d_k)
-        v = self.w_vs(v).view(sz_b, -1, h, d_v)
+        q = self.w_qs(q).view(sz_b, -1, self.h, self.d_k)
+        k = self.w_ks(k).view(sz_b, -1, self.h, self.d_k)
+        v = self.w_vs(v).view(sz_b, -1, self.h, self.d_v)
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
-
         if mask is not None:
             # mask(b*1*1*len) or (b*1*len*len)
             mask = mask.unsqueeze(1)
         q, attn = self.attention(q, k, v, mask=mask)
-
         # Combine the last two dimensions to concatenate all the heads together: b x lq x (n*dv)
-        q = q.transpose(1, 2).contiguous().view(sz_b, -1, h*d_v)
+        q = q.transpose(1, 2).contiguous().view(sz_b, -1, self.h*self.d_v)
         q = self.dropout(self.fc(q))
         return q

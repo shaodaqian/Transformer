@@ -1,4 +1,6 @@
 .venv
 .vscode
-data
+data/processed/*
+data/unprocessed/*
+!data/processed/TEST.*
 __pycache__

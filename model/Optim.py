@@ -8,7 +8,7 @@ class ScheduledOptim:
         self.init_lr = init_lr
         self.model_size = model_size
 
-    def step(self):
+    def step_and_update_lr(self):
         "Update parameters and rate"
         self.n_step += 1
         rate = self.rate()

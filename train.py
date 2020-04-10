@@ -14,7 +14,8 @@ def patch_source(source):
 
 def patch_target(target):
     target = target.transpose(0, 1)
-    target, gold = target[:, :-1], target[:, 1:]
+    gold = target[:, 1:].contiguous().view(-1)
+    target = target[:, :-1]
     return target, gold
 
 
@@ -41,6 +42,8 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
         loss = -(one_hot * log_prb).sum(dim=1)
         loss = loss.masked_select(non_pad_mask).sum()  # average later
     else:
+        print(prediction.size())
+        print(gold.size())
         loss = F.cross_entropy(prediction, gold, ignore_index=trg_pad_idx, reduction='sum')
     return loss
 
@@ -48,7 +51,7 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
 def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
     ''' Epoch operation in training phase'''
     model.train()
-    total_loss, total_num_words, total_num_correct_words = 0, 0, 0
+    total_loss, total_num_words, total_num_correct_words = 0, 1, 1
     desc = '  - (Training)   '
     for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
         # prepare data
@@ -58,14 +61,22 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
         optimizer.zero_grad()
         prediction = model(source_sequence, target_sequence)
         # backward pass and update parameters
-        loss, num_correct, num_words = calculate_metrics(
-            prediction, gold, args.trg_pad_idx, smoothing=smoothing
+        # loss, num_correct, num_words = calculate_metrics(
+        #     prediction, gold, args.trg_pad_idx, smoothing=smoothing
+        # )
+        prediction = prediction.view(-1, prediction.size(-1))
+        print('Prediction size:', prediction.size())
+        print('Gold size:', gold.size())
+        loss = F.cross_entropy(
+            prediction,
+            gold,
+            ignore_index=args.trg_pad_idx
         )
         loss.backward()
         optimizer.step_and_update_lr()
         # note keeping
-        total_num_words += num_words
-        total_num_correct_words += num_correct
+        # total_num_words += num_words
+        # total_num_correct_words += num_correct
         total_loss += loss.item()
     loss_per_word = total_loss/total_num_words
     accuracy = total_num_correct_words / total_num_words

@@ -36,7 +36,7 @@ class Transformer(nn.Module):
 
     def encode(self, source, source_mask):
         embedding = self.source_embedding(source)
-        print('Embedding size', embedding.size(0), embedding.size(1), embedding.size(2))
+        print('Embedding size', embedding.size())
         return self.encoder(embedding, source_mask)
 
     def decode(self, target, memory, source_mask, target_mask):

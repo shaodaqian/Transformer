@@ -42,13 +42,11 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
         loss = -(one_hot * log_prb).sum(dim=1)
         loss = loss.masked_select(non_pad_mask).sum()  # average later
     else:
-        print(prediction.size())
-        print(gold.size())
         loss = F.cross_entropy(prediction, gold, ignore_index=trg_pad_idx, reduction='sum')
     return loss
 
 
-def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
+def train_one_epoch(model, training_data, optimizer, args, device, smoothing=False):
     ''' Epoch operation in training phase'''
     model.train()
     total_loss, total_num_words, total_num_correct_words = 0, 1, 1
@@ -60,30 +58,31 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
         # forward pass
         optimizer.zero_grad()
         prediction = model(source_sequence, target_sequence)
+        output=model.generator(prediction)
+        output = output.view(-1, output.size(-1))
         # backward pass and update parameters
-        # loss, num_correct, num_words = calculate_metrics(
-        #     prediction, gold, args.trg_pad_idx, smoothing=smoothing
-        # )
-        prediction = prediction.view(-1, prediction.size(-1))
-        print('Prediction size:', prediction.size())
-        print('Gold size:', gold.size())
-        loss = F.cross_entropy(
-            prediction,
-            gold,
-            ignore_index=args.trg_pad_idx
+        loss, num_correct, num_words = calculate_metrics(
+            output, gold, args.trg_pad_idx, smoothing=smoothing
         )
+        # print(prediction)
+        # print(gold)
+        # print(target_sequence)
+        # loss = F.cross_entropy(
+        #     prediction,
+        #     gold,
+        #     ignore_index=args.trg_pad_idx
+        # )
         loss.backward()
-        optimizer.step_and_update_lr()
-        # note keeping
-        # total_num_words += num_words
-        # total_num_correct_words += num_correct
+        optimizer.step()
+        total_num_words += num_words
+        total_num_correct_words += num_correct
         total_loss += loss.item()
     loss_per_word = total_loss/total_num_words
     accuracy = total_num_correct_words / total_num_words
     return loss_per_word, accuracy
 
 
-def eval_one_epoch(model, validation_data, device, args):
+def eval_one_epoch(model, validation_data, device, args,smoothing=False):
     ''' Epoch operation in evaluation phase '''
     model.eval()
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0
@@ -97,8 +96,10 @@ def eval_one_epoch(model, validation_data, device, args):
             target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
             # forward
             prediction = model(source_sequence, target_sequence)
+            output = model.generator(prediction)
+            output = output.view(-1, output.size(-1))
             loss, num_correct, num_words = calculate_metrics(
-                prediction, gold, args.trg_pad_idx, smoothing=False
+                output, gold, args.trg_pad_idx, smoothing=smoothing
             )
             # note keeping
             total_num_words += num_words

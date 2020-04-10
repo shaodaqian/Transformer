@@ -73,7 +73,7 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing=Fal
         #     ignore_index=args.trg_pad_idx
         # )
         loss.backward()
-        optimizer.step()
+        optimizer.step_and_update_lr()
         total_num_words += num_words
         total_num_correct_words += num_correct
         total_loss += loss.item()
@@ -82,7 +82,7 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing=Fal
     return loss_per_word, accuracy
 
 
-def eval_one_epoch(model, validation_data, device, args,smoothing=False):
+def eval_one_epoch(model, validation_data, args, device,smoothing=False):
     ''' Epoch operation in evaluation phase '''
     model.eval()
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0

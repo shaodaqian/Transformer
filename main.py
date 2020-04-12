@@ -49,7 +49,7 @@ def main():
 
     # parser.add_argument('-d_model', type=int, default=512)
     # parser.add_argument('-d_inner_hid', type=int, default=2048)
-    parser.add_argument('-d_model', type=int, default=128)
+    parser.add_argument('-d_model', type=int, default=512)
     parser.add_argument('-d_inner_hid', type=int, default=512)
 
     # parser.add_argument('-n_head', type=int, default=8)

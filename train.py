@@ -42,8 +42,6 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
         loss = -(one_hot * log_prb).sum(dim=1)
         loss = loss.masked_select(non_pad_mask).sum()  # average later
     else:
-        print(prediction.size())
-        print(gold.size())
         loss = F.cross_entropy(prediction, gold, ignore_index=trg_pad_idx, reduction='sum')
     return loss
 
@@ -67,10 +65,12 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing):
         prediction = prediction.view(-1, prediction.size(-1))
         print('Prediction size:', prediction.size())
         print('Gold size:', gold.size())
+        print(gold)
         loss = F.cross_entropy(
             prediction,
             gold,
-            ignore_index=args.trg_pad_idx
+            ignore_index=args.trg_pad_idx,
+            reduction='sum'
         )
         loss.backward()
         optimizer.step_and_update_lr()

@@ -72,10 +72,12 @@ def main():
     args = parser.parse_args()
     args.cuda = not args.no_cuda
     args.d_word_vec = args.d_model
+    args.batch_size=32
+    args.label_smoothing=True
 
-    if not args.log and not args.save_model:
-        print('No experiment result will be saved.')
-        raise ValueError('No save location given')
+    # if not args.log and not args.save_model:
+    #     print('No experiment result will be saved.')
+    #     raise ValueError('No save location given')
 
     if args.batch_size < 2048 and args.warmup_steps <= 4000:
         print('[Warning] The warmup steps may be not enough.\n' \
@@ -103,7 +105,7 @@ def main():
     ).to(device)
 
     optimizer = ScheduledOptim(
-        optim.Adam(transformer.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-09),
+        optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),
         2.0,
         args.d_model,
         args.warmup_steps
@@ -114,8 +116,8 @@ def main():
         training_data=training_data,
         validation_data=validation_data,
         optimizer=optimizer,
-        device=device,
-        args=args
+        args=args,
+        device=device
     )
 
 if __name__ == "__main__":

@@ -30,13 +30,12 @@ class Transformer(nn.Module):
         self.decoder = decoder
         self.source_embedding = source_embedding
         self.target_embedding = target_embedding
-        self.output_generator = output_generator
+        self.generator = output_generator
         self.trg_pad_idx=trg_pad_idx
         self.src_pad_idx=src_pad_idx
 
     def encode(self, source, source_mask):
         embedding = self.source_embedding(source)
-        print('Embedding size', embedding.size())
         return self.encoder(embedding, source_mask)
 
     def decode(self, target, memory, source_mask, target_mask):

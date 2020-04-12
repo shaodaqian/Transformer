@@ -4,8 +4,6 @@ import torch.nn.functional as F
 import copy
 import math
 
-from pytorch_memlab import profile
-
 
 def  make_clones(layer, num_layers):
     return nn.ModuleList([copy.deepcopy(layer) for _ in range(num_layers)])

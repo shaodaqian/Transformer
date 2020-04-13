@@ -15,9 +15,10 @@ from train import train
 
 from special_tokens import PAD_WORD
 
+
 def dataloaders(opt, device):
     batch_size = opt.batch_size
-    data = load_data_dict()
+    data = load_data_dict(opt)
     opt.max_token_seq_len = data['max_len']
     opt.src_pad_idx = data['fields'][0].vocab.stoi[PAD_WORD]
     opt.trg_pad_idx = data['fields'][1].vocab.stoi[PAD_WORD]
@@ -30,8 +31,8 @@ def dataloaders(opt, device):
 
     train = data['train']
     val = data['valid']
-    train_iterator = BucketIterator(train, batch_size=batch_size, device=device, train=True)
-    val_iterator = BucketIterator(val, batch_size=batch_size, device=device)
+    train_iterator = BucketIterator(train, batch_size=batch_size, device=device, train=True, sort=False, shuffle=False)
+    val_iterator = BucketIterator(val, batch_size=batch_size, device=device, sort=False, shuffle=False)
 
     return train_iterator, val_iterator
 
@@ -47,15 +48,11 @@ def main():
     parser.add_argument('-epoch', type=int, default=10)
     parser.add_argument('-b', '--batch_size', type=int, default=2048)
 
-    # parser.add_argument('-d_model', type=int, default=512)
-    # parser.add_argument('-d_inner_hid', type=int, default=2048)
-    parser.add_argument('-d_model', type=int, default=512)
-    parser.add_argument('-d_inner_hid', type=int, default=512)
+    parser.add_argument('-d_model', type=int, default=128)
+    parser.add_argument('-d_inner_hid', type=int, default=128)
 
-    # parser.add_argument('-n_head', type=int, default=8)
-    # parser.add_argument('-n_layers', type=int, default=6)
-    parser.add_argument('-n_head', type=int, default=2)
-    parser.add_argument('-n_layers', type=int, default=2)
+    parser.add_argument('-n_head', type=int, default=4)
+    parser.add_argument('-n_layers', type=int, default=4)
     parser.add_argument('-warmup', '--warmup_steps', type=int, default=4000)
 
     parser.add_argument('-dropout', type=float, default=0.1)

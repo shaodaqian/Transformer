@@ -64,14 +64,6 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing=Fal
         loss, num_correct, num_words = calculate_metrics(
             output, gold, args.trg_pad_idx, smoothing=smoothing
         )
-        # print(prediction)
-        # print(gold)
-        # print(target_sequence)
-        # loss = F.cross_entropy(
-        #     prediction,
-        #     gold,
-        #     ignore_index=args.trg_pad_idx
-        # )
         loss.backward()
         optimizer.step_and_update_lr()
         total_num_words += num_words

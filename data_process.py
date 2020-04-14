@@ -77,17 +77,8 @@ def subword(en, de, args, merge_ops=32000):
 
 
 @profile
-def load_data(name, fields, opts):
+def load_data(name, fields):
     path = os.path.join(DATA_FOLDER, name)
-    # data = DataLoader(
-    #     tt.datasets.TranslationDataset(
-    #         path=path,
-    #         exts=('.en', '.de'),
-    #         fields=fields
-    #     ),
-    #     num_workers=2,
-    #     batch_size=opts.batch_size
-    # )
     data = tt.datasets.TranslationDataset(
         path=path,
         exts=('.en', '.de'),
@@ -96,6 +87,7 @@ def load_data(name, fields, opts):
     return data
 
 
+@profile
 def load_vocab(ext):
     filename = os.path.join(DATA_FOLDER, f'vocab.50k.{ext}')
     vocab = {}
@@ -124,13 +116,12 @@ def load_data_dict(opts):
         eos_token=EOS_WORD,
     )
     fields = (en_field, de_field)
-    data['train'] = load_data('train.tok.clean.bpe.32000', fields, opts)
+    data['train'] = load_data(opts.train_data, fields)
     # en_vocab = load_vocab('en')
     # de_vocab = load_vocab('de')
     en_field.build_vocab(data['train'].src)
     de_field.build_vocab(data['train'].trg)
-    data['fields'] = fields
-    data['valid'] = load_data('newstest2014.tok.clean.bpe.32000', fields, opts)
+    data['valid'] = load_data(opts.val_data, fields)
     return data
 
 # en-fr: 32000 word-piece vocab: Google’s neural machine translation system: Bridging the gap between human and machine translation (2016)

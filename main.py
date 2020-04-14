@@ -9,7 +9,7 @@ import torch.optim as optim
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
 from model.transformer import build_transformer
-from dataprocess import load_data_dict
+from data_process import load_data_dict
 
 from train import train
 
@@ -20,20 +20,16 @@ def dataloaders(opt, device):
     batch_size = opt.batch_size
     data = load_data_dict(opt)
     opt.max_token_seq_len = data['max_len']
-    opt.src_pad_idx = data['fields'][0].vocab.stoi[PAD_WORD]
-    opt.trg_pad_idx = data['fields'][1].vocab.stoi[PAD_WORD]
-    opt.src_vocab_size = len(data['fields'][0].vocab)
-    opt.trg_vocab_size = len(data['fields'][1].vocab)
-
-    # if opt.embs_share_weight:
-    #     assert data['vocab']['src'].vocab.stoi == data['vocab']['trg'].vocab.stoi, \
-    #         'To sharing word embedding the src/trg word2idx table shall be the same.'
-
+    print(data['train'].fields)
+    opt.src_pad_idx = data['train'].fields['src'].vocab.stoi[PAD_WORD]
+    opt.trg_pad_idx = data['train'].fields['trg'].vocab.stoi[PAD_WORD]
+    opt.src_vocab_size = len(data['train'].fields['src'].vocab)
+    opt.trg_vocab_size = len(data['train'].fields['trg'].vocab)
     train = data['train']
     val = data['valid']
+    # Turn data into iterators for memory efficiency
     train_iterator = BucketIterator(train, batch_size=batch_size, device=device, train=True, sort=False, shuffle=False)
     val_iterator = BucketIterator(val, batch_size=batch_size, device=device, sort=False, shuffle=False)
-
     return train_iterator, val_iterator
 
 
@@ -42,8 +38,8 @@ def main():
 
     parser.add_argument('-data_pkl', default=None)  # all-in-1 data pickle or bpe field
 
-    parser.add_argument('-train_path', default=None)  # bpe encoded data
-    parser.add_argument('-val_path', default=None)  # bpe encoded data
+    parser.add_argument('-train_data', default=None)  # bpe encoded data
+    parser.add_argument('-val_data', default=None)  # bpe encoded data
 
     parser.add_argument('-epoch', type=int, default=10)
     parser.add_argument('-b', '--batch_size', type=int, default=2048)

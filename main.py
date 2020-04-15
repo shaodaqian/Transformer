@@ -66,14 +66,13 @@ def main():
     parser.add_argument('-save_model', default=None)
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
-    parser.add_argument('-no_cuda', action='store_true')
-    parser.add_argument('-label_smoothing', action='store_true')
+    parser.add_argument('-no_cuda', action='store_true', default=False)
+    parser.add_argument('-label_smoothing', action='store_true',default=True)
 
     args = parser.parse_args()
     args.cuda = not args.no_cuda
     args.d_word_vec = args.d_model
-    args.batch_size=32
-    args.label_smoothing=True
+
 
     # if not args.log and not args.save_model:
     #     print('No experiment result will be saved.')

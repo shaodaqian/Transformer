@@ -6,8 +6,7 @@ import re
 import os
 import dill as pickle
 from collections import Counter
-
-from pytorch_memlab import profile
+from torch.utils.data import DataLoader
 
 from special_tokens import PAD_WORD, UNK_WORD, EOS_WORD, BOS_WORD
 
@@ -77,6 +76,7 @@ def subword(en, de, args, merge_ops=32000):
     return bpe
 
 
+@profile
 def load_data(name, fields):
     path = os.path.join(DATA_FOLDER, name)
     data = tt.datasets.TranslationDataset(
@@ -87,6 +87,7 @@ def load_data(name, fields):
     return data
 
 
+@profile
 def load_vocab(ext):
     filename = os.path.join(DATA_FOLDER, f'vocab.50k.{ext}')
     vocab = {}
@@ -98,24 +99,29 @@ def load_vocab(ext):
     return Counter(vocab)
 
 
-def load_data_dict():
+@profile
+def load_data_dict(opts):
     data = {}
     data['max_len'] = 80
-    field = tt.data.Field(
+    en_field = tt.data.Field(
         tokenize=str.split,
-        lower=True,
         pad_token=PAD_WORD,
         unk_token=UNK_WORD,
         eos_token=EOS_WORD,
     )
-    fields = (field, field)
-    data['train'] = load_data('TEST', fields)
-    from itertools import chain
-    field.build_vocab(chain(data['train'].src, data['train'].trg))
-    data['fields'] = fields
-    data['valid'] = load_data('TEST', fields)
-
-    # data['valid'] = load_data('newstest2014.tok.clean.bpe.32000', src_field, trg_field)
+    de_field = tt.data.Field(
+        tokenize=str.split,
+        pad_token=PAD_WORD,
+        unk_token=UNK_WORD,
+        eos_token=EOS_WORD,
+    )
+    fields = (en_field, de_field)
+    data['train'] = load_data(opts.train_data, fields)
+    # en_vocab = load_vocab('en')
+    # de_vocab = load_vocab('de')
+    en_field.build_vocab(data['train'].src)
+    de_field.build_vocab(data['train'].trg)
+    data['valid'] = load_data(opts.val_data, fields)
     return data
 
 # en-fr: 32000 word-piece vocab: Google’s neural machine translation system: Bridging the gap between human and machine translation (2016)

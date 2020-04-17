@@ -3,7 +3,7 @@ import urllib.request
 import tarfile
 
 
-DATA_FOLDER = './data/unprocessed'
+UNPROCESSED_FOLDER = './data/unprocessed'
 
 
 def download_file(response, file_path, file_size):
@@ -77,15 +77,16 @@ def get_data_urls_and_filenames(task):
     return URLS, FILES, CORPORA
 
 
-if __name__ == '__main__':
+def download_data():
     try:
-        os.mkdir(DATA_FOLDER)
+        os.mkdir(UNPROCESSED_FOLDER)
     except FileExistsError:
         print('Data folder exists')
-    URLS, FILES, CORPORA = get_data_urls_and_filenames('en-fr')
+    URLS, FILES, _ = get_data_urls_and_filenames('en-de')
     for i, url in enumerate(URLS):
         filename = f'{FILES[i]}.tgz'
-        file_path = os.path.join(DATA_FOLDER, filename)
+        file_path = os.path.join(UNPROCESSED_FOLDER, filename)
+        # Download file
         with urllib.request.urlopen(url) as response:
             meta = response.info()
             file_size = int(meta.get("Content-Length"))
@@ -95,11 +96,10 @@ if __name__ == '__main__':
                 print(f'Downloading: {filename} Bytes: {file_size}')
                 download_file(response, file_path, file_size)
         # Unpack tgz file
-        extract_folder = os.path.join(DATA_FOLDER, FILES[i])
-        if not os.path.exists(extract_folder):
-            os.mkdir(extract_folder)
-            with tarfile.open(file_path) as tf:
-                print(f'Extracting into {extract_folder}')
-                tf.extractall(extract_folder)
-        else:
-            print(f'{extract_folder} exists, skipping extraction')
+        with tarfile.open(file_path) as tar:
+            print(f'Extracting into {UNPROCESSED_FOLDER}')
+            tar.extractall(UNPROCESSED_FOLDER)
+
+
+if __name__ == '__main__':
+    download_data()

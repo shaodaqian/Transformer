@@ -43,8 +43,8 @@ def main():
     parser.add_argument('-save_model', default=None)
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
-    parser.add_argument('-no_cuda', action='store_true')
-    parser.add_argument('-label_smoothing', action='store_true')
+    parser.add_argument('-no_cuda', action='store_true', default=False)
+    parser.add_argument('-label_smoothing', action='store_true',default=True)
 
     parser.add_argument('-download_data', action='store_true')
     parser.add_argument('-preprocess_data', action='store_true')
@@ -52,8 +52,7 @@ def main():
     args = parser.parse_args()
     args.cuda = not args.no_cuda
     args.d_word_vec = args.d_model
-    args.batch_size=32
-    args.label_smoothing=True
+
 
     if args.batch_size < 2048 and args.warmup_steps <= 4000:
         print('[Warning] The warmup steps may be not enough.\n' \

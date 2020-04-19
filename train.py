@@ -82,8 +82,6 @@ def eval_one_epoch(model, validation_data, args, device,smoothing=False):
     with torch.no_grad():
         for batch in tqdm(validation_data, mininterval=2, desc=desc, leave=False):
             # prepare data
-            # source_sequence = patch_source(batch.src).to(device)
-            # target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
             source_sequence = patch_source(batch.src).to(device)
             target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
             # forward
@@ -97,9 +95,12 @@ def eval_one_epoch(model, validation_data, args, device,smoothing=False):
             total_num_words += num_words
             total_num_correct_words += num_correct
             total_loss += loss.item()
-
-    loss_per_word = total_loss/total_num_words
-    accuracy = total_num_correct_words/total_num_words
+    if total_num_words != 0:
+        loss_per_word = total_loss/total_num_words
+        accuracy = total_num_correct_words/total_num_words
+    else:
+        loss_per_word = 0
+        accuracy = 0
     return loss_per_word, accuracy
 
 

@@ -5,8 +5,6 @@ import numpy as np
 from model.sublayers import make_clones, Norm, SublayerConnectionNormalisation, FeedForward, MultiHeadAttention
 from model.layers import Embedder, PositionalEncoder
 
-from pytorch_memlab import profile
-
 
 class EncoderLayer(nn.Module):
     "An encoder layer is made up of two sublayers."

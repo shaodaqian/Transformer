@@ -7,8 +7,6 @@ from model.decoder import Decoder
 from model.layers import Embedder, PositionalEncoder
 import copy
 
-from pytorch_memlab import profile
-
 
 def src_mask(seq, pad_idx):
     return (seq != pad_idx).unsqueeze(1)

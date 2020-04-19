@@ -129,7 +129,7 @@ def endepreprocessing(args):
     print('Done')
 
 
-def load_data(filename, fields, batch_size, device):
+def load_data(filename, fields, batch_size, device, train):
     path = os.path.join(PROCESSED_FOLDER, filename)
     if not isinstance(fields[0], (tuple, list)):
         fields = [('src', fields[0]), ('trg', fields[1])]
@@ -137,11 +137,11 @@ def load_data(filename, fields, batch_size, device):
         src_path, trg_path = tuple(os.path.expanduser(path + x) for x in ('.en', '.de'))
         with io.open(src_path, mode='r', encoding='utf-8') as src_file, \
                 io.open(trg_path, mode='r', encoding='utf-8') as trg_file:
-            for i, (src_line, trg_line) in enumerate(zip(src_file, trg_file)):
+            for src_line, trg_line in zip(src_file, trg_file):
                 src_line, trg_line = src_line.strip(), trg_line.strip()
                 if src_line != '' and trg_line != '':
                     yield Example.fromlist([src_line, trg_line], fields)
-    examples = example_generator()
+    examples = list(example_generator())
     data = BucketIterator(
         Dataset(
             examples,
@@ -149,6 +149,7 @@ def load_data(filename, fields, batch_size, device):
         ),
         batch_size=batch_size,
         device=device,
+        train=train,
         sort=False,
         shuffle=False,
     )
@@ -187,9 +188,9 @@ def load_data_dict(opts, device):
     de_vocab = load_vocab('de')
     de_field.vocab = de_field.vocab_cls(de_vocab, specials=[PAD_WORD, UNK_WORD, EOS_WORD])
     print('Loading data')
-    training = load_data(opts.train_data, fields, opts.batch_size, device)
+    training = load_data(opts.train_data, fields, opts.batch_size, device, train=True)
     print('Training data loaded')
-    val = load_data(opts.val_data, fields, opts.batch_size, device)
+    val = load_data(opts.val_data, fields, opts.batch_size, device, train=False)
     print('Validation data loaded')
     opts.max_token_seq_len = 80
     opts.src_pad_idx = en_field.vocab.stoi[PAD_WORD]

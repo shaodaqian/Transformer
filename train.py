@@ -49,7 +49,7 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
 def train_one_epoch(model, training_data, optimizer, args, device, smoothing=False):
     ''' Epoch operation in training phase'''
     model.train()
-    total_loss, total_num_words, total_num_correct_words = 0, 1, 1
+    total_loss, total_num_words, total_num_correct_words = 0, 0, 0
     desc = '  - (Training)   '
     for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
         # prepare data
@@ -69,8 +69,12 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing=Fal
         total_num_words += num_words
         total_num_correct_words += num_correct
         total_loss += loss.item()
-    loss_per_word = total_loss/total_num_words
-    accuracy = total_num_correct_words / total_num_words
+    if total_num_words != 0:
+        loss_per_word = total_loss/total_num_words
+        accuracy = total_num_correct_words / total_num_words
+    else:
+        loss_per_word = 0
+        accuracy = 0
     return loss_per_word, accuracy
 
 

@@ -129,7 +129,7 @@ def endepreprocessing(args):
     print('Done')
 
 
-def load_data(filename, fields, batch_size, device, ignore_every=1):
+def load_data(filename, fields, batch_size, device):
     path = os.path.join(PROCESSED_FOLDER, filename)
     if not isinstance(fields[0], (tuple, list)):
         fields = [('src', fields[0]), ('trg', fields[1])]
@@ -138,10 +138,9 @@ def load_data(filename, fields, batch_size, device, ignore_every=1):
         with io.open(src_path, mode='r', encoding='utf-8') as src_file, \
                 io.open(trg_path, mode='r', encoding='utf-8') as trg_file:
             for i, (src_line, trg_line) in enumerate(zip(src_file, trg_file)):
-                if i % ignore_every == 0:
-                    src_line, trg_line = src_line.strip(), trg_line.strip()
-                    if src_line != '' and trg_line != '':
-                        yield Example.fromlist([src_line, trg_line], fields)
+                src_line, trg_line = src_line.strip(), trg_line.strip()
+                if src_line != '' and trg_line != '':
+                    yield Example.fromlist([src_line, trg_line], fields)
     examples = example_generator()
     data = BucketIterator(
         Dataset(
@@ -188,8 +187,7 @@ def load_data_dict(opts, device):
     de_vocab = load_vocab('de')
     de_field.vocab = de_field.vocab_cls(de_vocab, specials=[PAD_WORD, UNK_WORD, EOS_WORD])
     print('Loading data')
-    print(opts.ignore_every)
-    training = load_data(opts.train_data, fields, opts.batch_size, device, opts.ignore_every)
+    training = load_data(opts.train_data, fields, opts.batch_size, device)
     print('Training data loaded')
     val = load_data(opts.val_data, fields, opts.batch_size, device)
     print('Validation data loaded')

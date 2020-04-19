@@ -49,8 +49,6 @@ def main():
     parser.add_argument('-download_data', action='store_true')
     parser.add_argument('-preprocess_data', action='store_true')
 
-    parser.add_argument('-ignore_every', type=int, default=1)
-
     args = parser.parse_args()
     args.cuda = not args.no_cuda
     args.d_word_vec = args.d_model

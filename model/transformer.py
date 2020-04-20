@@ -56,7 +56,7 @@ class OutputGenerator(nn.Module):
         return F.log_softmax(self.projection(x), dim=1)
 
 
-def build_transformer(source_vocab, target_vocab, trg_pad_idx,src_pad_idx,num_layers=6, num_attention_layers=8, d_model=512, d_ff=2048, dropout=0.1):
+def build_transformer(source_vocab, target_vocab, trg_pad_idx, src_pad_idx, num_layers=6, num_attention_layers=8, d_model=512, d_ff=2048, dropout=0.1):
     # we can do a shared vocab here to share the weights for two embeddings and outputgenerator projection
     positional_encoder = PositionalEncoder(d_model, dropout)
     encoder = Encoder(num_layers, num_attention_layers, d_model, d_ff, dropout=dropout)

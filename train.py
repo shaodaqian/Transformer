@@ -22,7 +22,6 @@ def patch_target(target):
 def calculate_metrics(prediction, gold, trg_pad_idx, smoothing=False):
     loss = compute_loss(prediction, gold, trg_pad_idx, smoothing=smoothing)
     prediction = prediction.max(1)[1]
-    gold = gold.contiguous().view(-1)
     non_pad_mask = gold.ne(trg_pad_idx)
     num_correct = prediction.eq(gold).masked_select(non_pad_mask).sum().item()
     num_words = non_pad_mask.sum().item()
@@ -52,8 +51,8 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing=Fal
     desc = '  - (Training)   '
     for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
         # prepare data
-        source_sequence = patch_source(batch.src).to(device)
-        target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
+        source_sequence = patch_source(batch.src)
+        target_sequence, gold = map(lambda x: x, patch_target(batch.trg))
         # forward pass
         optimizer.zero_grad()
         prediction = model(source_sequence, target_sequence)

@@ -221,4 +221,4 @@ def enfrpreprocessing():
 
 
 if __name__ == "__main__":
-    reduce_dataset('train.tok.clean.bpe.32000', 'train_reduced', ['en', 'de'], keep_every=300)
+    reduce_dataset('train.tok.clean.bpe.32000', 'train_reduced', ['en', 'de'], keep_every=50)

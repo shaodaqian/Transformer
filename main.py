@@ -44,7 +44,7 @@ def main():
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
     parser.add_argument('-no_cuda', action='store_true', default=False)
-    parser.add_argument('-label_smoothing', action='store_true',default=True)
+    parser.add_argument('-label_smoothing', action='store_true', default=False)
 
     parser.add_argument('-download_data', action='store_true')
     parser.add_argument('-preprocess_data', action='store_true')

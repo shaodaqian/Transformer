@@ -31,7 +31,6 @@ def calculate_metrics(prediction, gold, trg_pad_idx, smoothing=False):
 
 def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
     ''' Calculate cross entropy loss, apply label smoothing if needed. '''
-    # gold = gold.contiguous().view(-1)
     if smoothing:
         eps = 0.1
         n_class = prediction.size(1)

@@ -44,26 +44,32 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
     return loss
 
 
-def train_one_epoch(model, training_data, optimizer, args, device, smoothing=False):
+def run_one_epoch(model, data, args, device, optimizer=None, smoothing=False):
     ''' Epoch operation in training phase'''
+    training = optimizer is not None
     model.train()
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0
-    desc = '  - (Training)   '
-    for batch in tqdm(training_data, mininterval=2, desc=desc, leave=False):
+    if training:
+        desc = '  - (Training)   '
+    else:
+        desc = '  - (Validation) '
+    for batch in tqdm(data, mininterval=0.5, desc=desc, leave=False):
         # prepare data
-        source_sequence = patch_source(batch.src)
-        target_sequence, gold = map(lambda x: x, patch_target(batch.trg))
+        source_sequence = patch_source(batch.src).to(device)
+        target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
         # forward pass
-        optimizer.zero_grad()
+        if training:
+            optimizer.zero_grad()
         prediction = model(source_sequence, target_sequence)
-        output=model.generator(prediction)
+        output = model.generator(prediction)
         output = output.view(-1, output.size(-1))
         # backward pass and update parameters
         loss, num_correct, num_words = calculate_metrics(
             output, gold, args.trg_pad_idx, smoothing=smoothing
         )
-        loss.backward()
-        optimizer.step_and_update_lr()
+        if training:
+            loss.backward()
+            optimizer.step_and_update_lr()
         total_num_words += num_words
         total_num_correct_words += num_correct
         total_loss += loss.item()
@@ -76,45 +82,14 @@ def train_one_epoch(model, training_data, optimizer, args, device, smoothing=Fal
     return loss_per_word, accuracy
 
 
-def eval_one_epoch(model, validation_data, args, device,smoothing=False):
-    ''' Epoch operation in evaluation phase '''
-    model.eval()
-    total_loss, total_num_words, total_num_correct_words = 0, 0, 0
-    desc = '  - (Validation) '
-    with torch.no_grad():
-        for batch in tqdm(validation_data, mininterval=2, desc=desc, leave=False):
-            # prepare data
-            source_sequence = patch_source(batch.src).to(device)
-            target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
-            # forward
-            prediction = model(source_sequence, target_sequence)
-            output = model.generator(prediction)
-            output = output.view(-1, output.size(-1))
-            loss, num_correct, num_words = calculate_metrics(
-                output, gold, args.trg_pad_idx, smoothing=smoothing
-            )
-            # note keeping
-            total_num_words += num_words
-            total_num_correct_words += num_correct
-            total_loss += loss.item()
-    if total_num_words != 0:
-        loss_per_word = total_loss/total_num_words
-        accuracy = total_num_correct_words/total_num_words
-    else:
-        loss_per_word = 0
-        accuracy = 0
-    return loss_per_word, accuracy
-
-
 def train(model, training_data, validation_data, optimizer, args, device):
     ''' Start training '''
     log_train_file, log_valid_file = None, None
     "We can optionally log the training and validation processes."
     if args.log:
-        log_train_file = args.log + '.train.log'
-        log_valid_file = args.log + '.valid.log'
-        print('[Info] Training performance will be written to file: {} and {}'.format(
-            log_train_file, log_valid_file))
+        log_train_file = f'{args.log}.train.log'
+        log_valid_file = f'{args.log}.valid.log'
+        print(f'[Info] Training performance will be written to file: {log_train_file} and {log_valid_file}')
         with open(log_train_file, 'w') as log_tf, open(log_valid_file, 'w') as log_vf:
             log_tf.write('epoch,loss,ppl,accuracy\n')
             log_vf.write('epoch,loss,ppl,accuracy\n')
@@ -130,21 +105,22 @@ def train(model, training_data, validation_data, optimizer, args, device):
     for epoch_number in range(args.epoch):
         print('[ Epoch', epoch_number, ']')
         start_time = time.time()
-        training_loss, training_accuracy = train_one_epoch(
+        training_loss, training_accuracy = run_one_epoch(
             model,
             training_data,
-            optimizer,
             args,
             device,
+            optimizer=optimizer,
             smoothing=args.label_smoothing
         )
         print_performances('Training', training_loss, training_accuracy, start_time)
         # start = time.time()
-        validation_loss, validation_accuracy = eval_one_epoch(
+        validation_loss, validation_accuracy = run_one_epoch(
             model,
             validation_data,
             args,
-            device
+            device,
+            optimizer=None,
         )
         print_performances('Validation', validation_loss, validation_accuracy, start_time)
         validation_losses += [validation_loss]
@@ -152,10 +128,10 @@ def train(model, training_data, validation_data, optimizer, args, device):
         "Optionally save the model."
         if args.save_model:
             if args.save_mode == 'all':
-                model_name = args.save_model + '_accu_{accu:3.3f}.chkpt'.format(accu=100*validation_accuracy)
+                model_name = f'{args.save_model}_accu_{validation_accuracy:3.3f}.chkpt'
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
-                model_name = args.save_model + '.chkpt'
+                model_name = f'{args.save_model}.chkpt'
                 if validation_loss <= min(validation_losses):
                     torch.save(checkpoint, model_name)
                     print('    - [Info] The checkpoint file has been updated.')

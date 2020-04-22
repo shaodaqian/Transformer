@@ -39,30 +39,33 @@ def main():
     parser.add_argument('-embs_share_weight', action='store_true')
     parser.add_argument('-proj_share_weight', action='store_true')
 
-    parser.add_argument('-log', default=None)
-    parser.add_argument('-save_model', default=None)
+    parser.add_argument('-log', default='latest')
+    parser.add_argument('-save_model', default='latest')
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
-    parser.add_argument('-no_cuda', action='store_true', default=False)
+    parser.add_argument('-device', choices=['cpu', 'gpu', 'tpu'], default='gpu')
     parser.add_argument('-label_smoothing', action='store_true', default=False)
 
     parser.add_argument('-download_data', action='store_true')
     parser.add_argument('-preprocess_data', action='store_true')
 
     args = parser.parse_args()
-    args.cuda = not args.no_cuda
 
 
-    if args.batch_size < 2048 and args.warmup_steps <= 4000:
-        print('[Warning] The warmup steps may be not enough.\n' \
-              '(sz_b, warmup) = (2048, 4000) is the official setting.\n' \
-              'Using smaller batch w/o longer warmup may cause ' \
-              'the warmup stage ends with only little data trained.')
+    # if args.batch_size < 2048 and args.warmup_steps <= 4000:
+    #     print('[Warning] The warmup steps may be not enough.\n' \
+    #           '(sz_b, warmup) = (2048, 4000) is the official setting.\n' \
+    #           'Using smaller batch w/o longer warmup may cause ' \
+    #           'the warmup stage ends with only little data trained.')
 
-    device = torch.device('cuda' if args.cuda else 'cpu')
+    if args.device == 'cpu' or args.device == 'gpu':
+        device = torch.device(args.device)
+    else:
+        import torch_xla
+        import torch_xla.core.xla_model as xm
+        device = xm.xla_device()
 
     # ========= Loading Dataset =========#
-
     if args.download_data:
         download_data()
     if args.preprocess_data:
@@ -71,6 +74,7 @@ def main():
     training_data, validation_data = load_data_dict(args, device)
 
     print(args)
+    # Build model
     transformer = build_transformer(
         args.src_vocab_size,
         args.trg_vocab_size,
@@ -82,14 +86,14 @@ def main():
         num_attention_layers=args.n_head,
         dropout=args.dropout
     ).to(device)
-
+    # Adam optimizer; hyperparameters as specified in Attention Is All You Need
     optimizer = ScheduledOptim(
         optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),
         2.0,
         args.d_model,
         args.warmup_steps
     )
-
+    # Train
     train(
         transformer,
         training_data=training_data,
@@ -98,6 +102,7 @@ def main():
         args=args,
         device=device
     )
+
 
 if __name__ == "__main__":
     main()

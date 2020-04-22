@@ -43,7 +43,7 @@ def main():
     parser.add_argument('-save_model', default='latest')
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
-    parser.add_argument('-device', choices=['cpu', 'gpu'], default='gpu')
+    parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-label_smoothing', action='store_true', default=False)
 
     parser.add_argument('-download_data', action='store_true')
@@ -87,7 +87,6 @@ def main():
         2.0,
         args.d_model,
         args.warmup_steps,
-        args.device,
     )
     # Train
     train(

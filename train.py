@@ -5,7 +5,6 @@ import torch.optim as optim
 import argparse, time
 from tqdm import tqdm
 import math
-from torchtext.data.metrics import bleu_score
 
 
 def patch_source(source):
@@ -48,12 +47,13 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
 def run_one_epoch(model, data, args, device, optimizer=None, smoothing=False):
     ''' Epoch operation in training phase'''
     training = optimizer is not None
-    model.train()
     total_loss, total_num_words, total_num_correct_words = 0, 0, 0
     if training:
         desc = '  - (Training)   '
+        model.train()
     else:
         desc = '  - (Validation) '
+        model.eval()
     for batch in tqdm(data, mininterval=0.5, desc=desc, leave=False):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
@@ -140,9 +140,11 @@ def train(model, training_data, validation_data, optimizer, args, device):
         "Optionally log the training/validation step."
         if log_train_file and log_valid_file:
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
-                log_tf.write('{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
-                    epoch=epoch_number, loss=training_loss,
-                    ppl=math.exp(min(training_loss, 100)), accu=100*training_accuracy))
-                log_vf.write('{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
-                    epoch=epoch_number, loss=validation_loss,
-                    ppl=math.exp(min(validation_loss, 100)), accu=100*validation_accuracy))
+                results = '{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
+                    epoch=epoch_number,
+                    loss=training_loss,
+                    ppl=math.exp(min(training_loss, 100)),
+                    accu=100*training_accuracy
+                )
+                log_tf.write(results)
+                log_vf.write(results)

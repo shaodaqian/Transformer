@@ -65,6 +65,8 @@ def main():
         import torch_xla.core.xla_model as xm
         device = xm.xla_device()
 
+    print(device)
+
     # ========= Loading Dataset =========#
     if args.download_data:
         download_data()

@@ -18,7 +18,7 @@ class ScheduledOptim:
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = rate
         if self.device == 'tpu':
-            xm.optimizer_step(self.optimizer)
+            xm.optimizer_step(self.optimizer, barrier=True)
         else:
             self.optimizer.step()
 

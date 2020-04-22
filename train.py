@@ -5,6 +5,7 @@ import torch.optim as optim
 import argparse, time
 from tqdm import tqdm
 import math
+from torchtext.data.metrics import bleu_score
 
 
 def patch_source(source):

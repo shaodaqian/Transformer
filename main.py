@@ -43,7 +43,7 @@ def main():
     parser.add_argument('-save_model', default='latest')
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
-    parser.add_argument('-device', choices=['cpu', 'gpu', 'tpu'], default='gpu')
+    parser.add_argument('-device', choices=['cpu', 'gpu'], default='gpu')
     parser.add_argument('-label_smoothing', action='store_true', default=False)
 
     parser.add_argument('-download_data', action='store_true')
@@ -58,14 +58,7 @@ def main():
     #           'Using smaller batch w/o longer warmup may cause ' \
     #           'the warmup stage ends with only little data trained.')
 
-    if args.device == 'cpu' or args.device == 'gpu':
-        device = torch.device(args.device)
-    else:
-        import torch_xla
-        import torch_xla.core.xla_model as xm
-        device = xm.xla_device()
-
-    print(device)
+    device = torch.device(args.device)
 
     # ========= Loading Dataset =========#
     if args.download_data:

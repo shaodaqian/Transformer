@@ -1,20 +1,26 @@
+import torch_xla.core.xla_model as xm
+
+
 class ScheduledOptim:
     "Optim wrapper that implements rate."
-
-    def __init__(self, optimizer, init_lr, model_size, warmup):
+    def __init__(self, optimizer, init_lr, model_size, warmup, device):
         self.optimizer = optimizer
         self.n_step = 0
         self.warmup = warmup
         self.init_lr = init_lr
         self.model_size = model_size
-
+        self.device = device
+            
     def step_and_update_lr(self):
         "Update parameters and rate"
         self.n_step += 1
         rate = self.rate()
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = rate
-        self.optimizer.step()
+        if self.device == 'tpu':
+            xm.optimizer_step(self.optimizer)
+        else:
+            self.optimizer.step()
 
     def rate(self, step=None):
         "Implement `lrate` above"

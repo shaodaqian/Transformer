@@ -91,7 +91,8 @@ def main():
         optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),
         2.0,
         args.d_model,
-        args.warmup_steps
+        args.warmup_steps,
+        args.device,
     )
     # Train
     train(

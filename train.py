@@ -5,7 +5,8 @@ import torch.optim as optim
 import argparse, time
 from tqdm import tqdm
 import math
-
+from model.translator import Translator
+from translate import translation_score
 
 def patch_source(source):
     source = source.transpose(0, 1)
@@ -14,7 +15,7 @@ def patch_source(source):
 
 def patch_target(target):
     target = target.transpose(0, 1)
-    gold = target[:, 1:].contiguous().view(-1)
+    gold = target[:, 1:]
     target = target[:, :-1]
     return target, gold
 
@@ -44,16 +45,26 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
     return loss
 
 
-def run_one_epoch(model, data, args, device, optimizer=None, smoothing=False):
+def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False, bleu=False):
     ''' Epoch operation in training phase'''
     training = optimizer is not None
-    total_loss, total_num_words, total_num_correct_words = 0, 0, 0
+    total_loss, total_num_words, total_num_correct_words, total_bleu,total_sentence = 0, 0, 0, 0,0
     if training:
         desc = '  - (Training)   '
         model.train()
     else:
         desc = '  - (Validation) '
         model.eval()
+    if bleu:
+        translator = Translator(
+            model=model,
+            beam_size=args.beam_size,
+            max_seq_len=args.max_seq_len,
+            src_pad_idx=args.src_pad_idx,
+            trg_pad_idx=args.trg_pad_idx,
+            trg_bos_idx=args.trg_bos_idx,
+            trg_eos_idx=args.trg_eos_idx,
+            device=device).to(device)
     for batch in tqdm(data, mininterval=0.5, desc=desc, leave=False):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
@@ -61,12 +72,18 @@ def run_one_epoch(model, data, args, device, optimizer=None, smoothing=False):
         # forward pass
         if training:
             optimizer.zero_grad()
+        if bleu:
+            pred_seq, ends = translator.translate_sentence(source_sequence)
+            bleu = translation_score(pred_seq, ends, gold, TRG)
+            total_bleu += bleu[0]
+            # print(bleu[0])
+            total_sentence += bleu[1]
         prediction = model(source_sequence, target_sequence)
         output = model.generator(prediction)
         output = output.view(-1, output.size(-1))
         # backward pass and update parameters
         loss, num_correct, num_words = calculate_metrics(
-            output, gold, args.trg_pad_idx, smoothing=smoothing
+            output, gold.contiguous().view(-1), args.trg_pad_idx, smoothing=smoothing
         )
         if training:
             loss.backward()
@@ -77,13 +94,16 @@ def run_one_epoch(model, data, args, device, optimizer=None, smoothing=False):
     if total_num_words != 0:
         loss_per_word = total_loss/total_num_words
         accuracy = total_num_correct_words / total_num_words
+        if bleu:
+            bleu_score = total_bleu / total_sentence
+            print('current BLEU score: ',bleu_score)
     else:
         loss_per_word = 0
         accuracy = 0
     return loss_per_word, accuracy
 
 
-def train(model, training_data, validation_data, optimizer, args, device):
+def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG,bleu_freq):
     ''' Start training '''
     log_train_file, log_valid_file = None, None
     "We can optionally log the training and validation processes."
@@ -111,18 +131,24 @@ def train(model, training_data, validation_data, optimizer, args, device):
             training_data,
             args,
             device,
+            TRG,
             optimizer=optimizer,
             smoothing=args.label_smoothing
         )
         print_performances('Training', training_loss, training_accuracy, start_time)
         # start = time.time()
+        if epoch_number%bleu_freq ==0:
+            cal_bleu=True
         validation_loss, validation_accuracy = run_one_epoch(
             model,
             validation_data,
             args,
             device,
+            TRG,
             optimizer=None,
+            bleu=cal_bleu
         )
+        cal_bleu=False
         print_performances('Validation', validation_loss, validation_accuracy, start_time)
         validation_losses += [validation_loss]
         checkpoint = {'epoch': epoch_number, 'settings': args, 'model': model.state_dict()}

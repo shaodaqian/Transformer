@@ -59,14 +59,16 @@ def main():
     #           'the warmup stage ends with only little data trained.')
 
     device = torch.device(args.device)
-
+    args.beam_size=4
+    args.max_seq_len=100
+    bleu_freq=10
     # ========= Loading Dataset =========#
     if args.download_data:
         download_data()
     if args.preprocess_data:
         endepreprocessing(args)
 
-    training_data, validation_data = load_data_dict(args, device)
+    training_data, validation_data,SRC,TRG = load_data_dict(args, device)
 
     print(args)
     # Build model
@@ -95,7 +97,10 @@ def main():
         validation_data=validation_data,
         optimizer=optimizer,
         args=args,
-        device=device
+        device=device,
+        SRC=SRC,
+        TRG=TRG,
+        bleu_freq=bleu_freq
     )
 
 

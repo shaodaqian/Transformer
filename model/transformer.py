@@ -17,8 +17,14 @@ def trg_mask(seq, pad_idx):
     src = src_mask(seq, pad_idx)
     sz_b, len_s = seq.size()
     utri=torch.triu(torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)
-    subsequent_mask = (1 - utri).bool()
-    return src & subsequent_mask
+    subsequent = (1 - utri).bool()
+    return src & subsequent
+
+def subsequent_mask(seq):
+    sz_b, len_s = seq.size()
+    utri=torch.triu(torch.ones((1, len_s, len_s), device=seq.device), diagonal=1)
+    subsequent = (1 - utri).bool()
+    return subsequent
 
 
 class Transformer(nn.Module):

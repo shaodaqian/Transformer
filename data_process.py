@@ -173,12 +173,16 @@ def load_data_dict(opts, device):
         pad_token=PAD_WORD,
         unk_token=UNK_WORD,
         eos_token=EOS_WORD,
+        init_token=BOS_WORD
+
     )
     de_field = Field(
         tokenize=str.split,
         pad_token=PAD_WORD,
         unk_token=UNK_WORD,
         eos_token=EOS_WORD,
+        init_token=BOS_WORD
+
     )
     fields = (en_field, de_field)
     print('Loading en vocab')
@@ -193,11 +197,15 @@ def load_data_dict(opts, device):
     val = load_data(opts.val_data, fields, opts.batch_size, device, train=False)
     print('Validation data loaded')
     opts.max_token_seq_len = 80
+    # en_field.build_vocab()
+    # de_field.build_vocab()
     opts.src_pad_idx = en_field.vocab.stoi[PAD_WORD]
     opts.trg_pad_idx = de_field.vocab.stoi[PAD_WORD]
+    opts.trg_bos_idx = de_field.vocab.stoi[BOS_WORD]
+    opts.trg_eos_idx = de_field.vocab.stoi[EOS_WORD]
     opts.src_vocab_size = len(en_field.vocab)
     opts.trg_vocab_size = len(de_field.vocab)
-    return training, val
+    return training, val, en_field,de_field
 
 
 def reduce_dataset(dataset_name, out_name, langs, keep_every=100):

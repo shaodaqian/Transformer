@@ -137,7 +137,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
         )
         print_performances('Training', training_loss, training_accuracy, start_time)
         # start = time.time()
-        if epoch_number%bleu_freq ==0:
+        if epoch_number % bleu_freq == 0 and epoch_number != 0:
             cal_bleu=True
         validation_loss, validation_accuracy = run_one_epoch(
             model,

@@ -39,8 +39,8 @@ def main():
     parser.add_argument('-embs_share_weight', action='store_true')
     parser.add_argument('-proj_share_weight', action='store_true')
 
-    parser.add_argument('-log', default='latest')
-    parser.add_argument('-save_model', default='latest')
+    parser.add_argument('-log', default='log')
+    parser.add_argument('-save_model', default='model')
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
     parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')

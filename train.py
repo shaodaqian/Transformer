@@ -74,10 +74,10 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
             optimizer.zero_grad()
         if bleu:
             pred_seq, ends = translator.translate_sentence(source_sequence)
-            bleu = translation_score(pred_seq, ends, gold, TRG)
-            total_bleu += bleu[0]
-            # print(bleu[0])
-            total_sentence += bleu[1]
+            bleu_scores = translation_score(pred_seq, ends, gold, TRG)
+            total_bleu += bleu_scores[0]
+            # print(bleu_scores[0])
+            total_sentence += bleu_scores[1]
         prediction = model(source_sequence, target_sequence)
         output = model.generator(prediction)
         output = output.view(-1, output.size(-1))
@@ -137,6 +137,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
         )
         print_performances('Training', training_loss, training_accuracy, start_time)
         # start = time.time()
+        cal_bleu=False
         if epoch_number % bleu_freq == 0 and epoch_number != 0:
             cal_bleu=True
         validation_loss, validation_accuracy = run_one_epoch(
@@ -148,7 +149,6 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             optimizer=None,
             bleu=cal_bleu
         )
-        cal_bleu=False
         print_performances('Validation', validation_loss, validation_accuracy, start_time)
         validation_losses += [validation_loss]
         checkpoint = {'epoch': epoch_number, 'settings': args, 'model': model.state_dict()}

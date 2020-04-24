@@ -44,7 +44,7 @@ def load_model(opt, device):
 def translation_score(pred_seq,ends,gold,TRG):
     bleu=[0,0]
     # bleu[0] is total bleu score, bleu[1] number of sentences
-    print(pred_seq.shape[0],gold.shape[0])
+    # print(pred_seq.shape[0],gold.shape[0])
     for i in range(pred_seq.shape[0]):
         current=pred_seq[i][:ends[i]]
         pred_line = ' '.join(TRG.vocab.itos[idx] for idx in current)

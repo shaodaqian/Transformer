@@ -12,7 +12,7 @@ from model.transformer import build_transformer
 from data_process import load_data_dict, endepreprocessing
 from data_download import download_data
 
-from train import train, CustomDataParallel
+from train import train
 
 from special_tokens import PAD_WORD
 
@@ -86,8 +86,7 @@ def main():
         num_layers=args.n_layers,
         num_attention_layers=args.n_head,
         dropout=args.dropout
-    )
-    transformer = CustomDataParallel(transformer)
+    ).to(device)
     # Adam optimizer; hyperparameters as specified in Attention Is All You Need
     optimizer = ScheduledOptim(
         optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),

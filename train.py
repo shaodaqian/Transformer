@@ -9,9 +9,9 @@ from model.translator import Translator
 from translate import translation_score
 
 
-class CustomDataParallel(torch.nn.DataParallel):
-    def __getattr__(self, name):
-        return getattr(self.module, name)
+# class TransformerParallel(torch.nn.DataParallel):
+#     def __getattr__(self, name):
+#         return getattr(self.module, name)
 
 
 def patch_source(source):
@@ -71,12 +71,14 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
             trg_bos_idx=args.trg_bos_idx,
             trg_eos_idx=args.trg_eos_idx,
             device=device
-        )
-        translator = CustomDataParallel(translator)
+        ).to(device)
+        # translator = CustomDataParallel(translator)
     for batch in tqdm(data, mininterval=0.5, desc=desc, leave=False):
         # prepare data
-        source_sequence = CustomDataParallel(patch_source(batch.src))
-        target_sequence, gold = map(lambda x: CustomDataParallel(x), patch_target(batch.trg))
+        source_sequence = patch_source(batch.src).to(device)
+        target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
+        # source_sequence = CustomDataParallel(patch_source(batch.src))
+        # target_sequence, gold = map(lambda x: CustomDataParallel(x), patch_target(batch.trg))
         # forward pass
         if training:
             optimizer.zero_grad()

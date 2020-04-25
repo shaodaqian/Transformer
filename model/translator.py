@@ -50,6 +50,9 @@ class Translator(nn.Module):
         beam_size = self.beam_size
         enc_output = self.model.encode(src_seq, src_mask)
         dec_output = self._model_decode(self.init_seq, enc_output, src_mask)
+        # print(dec_output.shape)
+        # print(torch.argmax(dec_output[0][0]))
+        # print(torch.max(dec_output[0][0]))
         best_k_probs, best_k_idx = dec_output[:, -1, :].topk(beam_size)
         scores = best_k_probs.view(beam_size)
         gen_seq = copy.deepcopy(self.blank_seqs)
@@ -117,6 +120,7 @@ class Translator(nn.Module):
                         ans_idx = ans_idx.item()
                         end=torch.argmax(eos_locs[ans_idx].int().to(self.device))
                         break
+                # print(gen_seq)
             ans.append(gen_seq[ans_idx].tolist())
             ends.append(end)
         return torch.tensor(ans),ends

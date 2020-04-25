@@ -234,9 +234,9 @@ def enfrpreprocessing(args):
     concatenate_files()
     unprocessed_file = os.path.join(UNPROCESSED_FOLDER, 'enfrconcatenated')
     spm.SentencePieceTrainer.Train(f'--input={unprocessed_file} --model_prefix=sentencepiece --vocab_size=32000')
-    
+
     sp = spm.SentencePieceProcessor()
 
 
 if __name__ == "__main__":
-    reduce_dataset('train.tok.clean.bpe.32000', 'train_reduced', ['en', 'de'], keep_every=500)
+    reduce_dataset('train.tok.clean.bpe.32000', 'train_reduced', ['en', 'de'], keep_every=50)

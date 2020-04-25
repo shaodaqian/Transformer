@@ -125,6 +125,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
     validation_losses = []
     for epoch_number in range(args.epoch):
         print('[ Epoch', epoch_number, ']')
+        cal_bleu=False
         start_time = time.time()
         training_loss, training_accuracy = run_one_epoch(
             model,
@@ -137,7 +138,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
         )
         print_performances('Training', training_loss, training_accuracy, start_time)
         # start = time.time()
-        if epoch_number%bleu_freq ==0:
+        if epoch_number%bleu_freq ==(bleu_freq-1):
             cal_bleu=True
         validation_loss, validation_accuracy = run_one_epoch(
             model,
@@ -148,7 +149,6 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             optimizer=None,
             bleu=cal_bleu
         )
-        cal_bleu=False
         print_performances('Validation', validation_loss, validation_accuracy, start_time)
         validation_losses += [validation_loss]
         checkpoint = {'epoch': epoch_number, 'settings': args, 'model': model.state_dict()}

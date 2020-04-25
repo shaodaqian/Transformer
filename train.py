@@ -64,7 +64,9 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
             trg_pad_idx=args.trg_pad_idx,
             trg_bos_idx=args.trg_bos_idx,
             trg_eos_idx=args.trg_eos_idx,
-            device=device).to(device)
+            device=device
+        )
+        translator = torch.nn.DataParallel(translator)
     for batch in tqdm(data, mininterval=0.5, desc=desc, leave=False):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
@@ -74,10 +76,9 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
             optimizer.zero_grad()
         if bleu:
             pred_seq, ends = translator.translate_sentence(source_sequence)
-            bleu = translation_score(pred_seq, ends, gold, TRG)
-            total_bleu += bleu[0]
-            # print(bleu[0])
-            total_sentence += bleu[1]
+            score = translation_score(pred_seq, ends, gold, TRG)
+            total_bleu += score[0]
+            total_sentence += score[1]
         prediction = model(source_sequence, target_sequence)
         output = model.generator(prediction)
         output = output.view(-1, output.size(-1))
@@ -96,11 +97,13 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
         accuracy = total_num_correct_words / total_num_words
         if bleu:
             bleu_score = total_bleu / total_sentence
-            print('current BLEU score: ',bleu_score)
+            print('current BLEU score: ', bleu_score)
+        else:
+            bleu_score = None
+        return loss_per_word, accuracy, bleu_score
     else:
-        loss_per_word = 0
-        accuracy = 0
-    return loss_per_word, accuracy
+        return 0, 0, None
+    
 
 
 def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG,bleu_freq):
@@ -116,18 +119,21 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             log_vf.write('epoch,loss,ppl,accuracy\n')
 
     "Utility function for printing performance at a given time."
-    def print_performances(header, loss, accu, start_time):
-        print('  - {header:12} ppl: {ppl: 8.5f}, accuracy: {accu:3.3f} %, '\
-              'elapse: {elapse:3.3f} min'.format(
-                  header=f"({header})", ppl=math.exp(min(loss, 100)),
-                  accu=100*accu, elapse=(time.time()-start_time)/60))
+    def get_performance_string(epoch, loss, accu, start_time, bleu=None):
+        ppl = math.exp(min(loss, 100))
+        elapse = time.time()-start_time / 60
+        accu = 100*accu
+        perf = f'e: {epoch}, ppl: {ppl: 8.3f}, accuracy: {accu:3.2f}%, elapse: {elapse:3.2f} min\n'
+        if bleu is not None:
+            perf += f'BLEU: {bleu}\n'
+        return perf
 
-    validation_losses = []
+
     for epoch_number in range(args.epoch):
         print('[ Epoch', epoch_number, ']')
         cal_bleu=False
         start_time = time.time()
-        training_loss, training_accuracy = run_one_epoch(
+        training_loss, training_accuracy, _ = run_one_epoch(
             model,
             training_data,
             args,
@@ -136,11 +142,10 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             optimizer=optimizer,
             smoothing=args.label_smoothing
         )
-        print_performances('Training', training_loss, training_accuracy, start_time)
         # start = time.time()
         if epoch_number%bleu_freq ==(bleu_freq-1):
             cal_bleu=True
-        validation_loss, validation_accuracy = run_one_epoch(
+        validation_loss, validation_accuracy, bleu_score = run_one_epoch(
             model,
             validation_data,
             args,
@@ -149,8 +154,8 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             optimizer=None,
             bleu=cal_bleu
         )
-        print_performances('Validation', validation_loss, validation_accuracy, start_time)
-        validation_losses += [validation_loss]
+        if epoch_number == 0:
+            min_val_loss = validation_loss
         checkpoint = {'epoch': epoch_number, 'settings': args, 'model': model.state_dict()}
         "Optionally save the model."
         if args.save_model:
@@ -159,18 +164,15 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
                 model_name = f'{args.save_model}.chkpt'
-                if validation_loss <= min(validation_losses):
+                if validation_loss <= min_val_loss:
+                    min_val_loss = validation_loss
                     torch.save(checkpoint, model_name)
                     print('    - [Info] The checkpoint file has been updated.')
 
         "Optionally log the training/validation step."
         if log_train_file and log_valid_file:
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
-                results = '{epoch},{loss: 8.5f},{ppl: 8.5f},{accu:3.3f}\n'.format(
-                    epoch=epoch_number,
-                    loss=training_loss,
-                    ppl=math.exp(min(training_loss, 100)),
-                    accu=100*training_accuracy
-                )
+                results = get_performance_string(epoch_number, training_loss, training_accuracy, start_time)
                 log_tf.write(results)
+                results = get_performance_string(epoch_number, validation_loss, validation_accuracy, start_time, bleu_score)
                 log_vf.write(results)

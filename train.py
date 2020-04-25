@@ -118,7 +118,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
     "Utility function for printing performance at a given time."
     def get_performance_string(epoch, loss, accu, start_time, bleu=None):
         ppl = math.exp(min(loss, 100))
-        elapse = time.time()-start_time / 60
+        elapse = (time.time() - start_time) / 60
         accu = 100*accu
         perf = f'e: {epoch}, ppl: {ppl: 8.3f}, accuracy: {accu:3.2f}%, elapse: {elapse:3.2f} min\n'
         if bleu is not None:

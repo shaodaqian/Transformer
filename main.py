@@ -39,15 +39,17 @@ def main():
     parser.add_argument('-embs_share_weight', action='store_true')
     parser.add_argument('-proj_share_weight', action='store_true')
 
-    parser.add_argument('-log', default='latest')
-    parser.add_argument('-save_model', default='latest')
+    parser.add_argument('-log', default='log')
+    parser.add_argument('-save_model', default='model')
     parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
-    parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
+    parser.add_argument('-d', '--device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-label_smoothing', action='store_true', default=False)
 
     parser.add_argument('-download_data', action='store_true')
     parser.add_argument('-preprocess_data', action='store_true')
+
+    parser.add_argument('-bf', '--bleu_freq', default=25)
 
     args = parser.parse_args()
 
@@ -61,7 +63,6 @@ def main():
     device = torch.device(args.device)
     args.beam_size=4
     args.max_seq_len=100
-    bleu_freq=10
     # ========= Loading Dataset =========#
     if args.download_data:
         download_data()
@@ -100,7 +101,7 @@ def main():
         device=device,
         SRC=SRC,
         TRG=TRG,
-        bleu_freq=bleu_freq
+        bleu_freq=args.bleu_freq
     )
 
 

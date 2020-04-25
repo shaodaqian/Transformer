@@ -4,3 +4,5 @@ data/processed/*
 data/unprocessed/*
 !data/processed/TEST.*
 __pycache__
+*.chkpt
+*.log

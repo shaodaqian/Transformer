@@ -81,7 +81,7 @@ class Translator(nn.Module):
         # print(gen_seq.shape)
         # print(best_k_r_idxs,'best_k_r_idxs')
         # Copy the corresponding previous tokens.
-        temp=copy.deepcopy(gen_seq)
+        # temp=copy.deepcopy(gen_seq)
         gen_seq[:, :step] = gen_seq[best_k_r_idxs, :step]
         # Set the best tokens in this beam search step
         # print(best_k2_idx[best_k_r_idxs, best_k_c_idxs])
@@ -104,7 +104,6 @@ class Translator(nn.Module):
                     gen_seq, scores = self._get_the_best_score_and_idx(gen_seq, dec_output, scores, step)
                     # Check if all path finished
                     # -- locate the eos in the generated sequences
-                    # print(gen_seq)
                     eos_locs = (gen_seq == trg_eos_idx)
                     eos_locs=eos_locs.to(self.device)
                     # eos_locs=eos_locs.type(torch.IntTensor)

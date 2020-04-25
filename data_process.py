@@ -2,7 +2,7 @@
 from torchtext.data import Field, BucketIterator, Example, Dataset
 from sacremoses import MosesTokenizer
 from subword_nmt import learn_bpe, apply_bpe
-import sentencepiece
+import sentencepiece as spm
 import re
 import os
 import dill as pickle
@@ -218,14 +218,17 @@ def reduce_dataset(dataset_name, out_name, langs, keep_every=100):
                 if (i % keep_every) == 0:
                     new.write(line)
 
+
+
+
 # en-fr: 32000 word-piece vocab: Google’s neural machine translation system: Bridging the gap between human and machine translation (2016)
 # https://arxiv.org/pdf/1609.08144.pdf
-
-# Use sentencepiece
-
-def enfrpreprocessing():
-    pass
-
+def enfrpreprocessing(args):
+    concatenate_files()
+    unprocessed_file = os.path.join(UNPROCESSED_FOLDER, 'enfrconcatenated')
+    spm.SentencePieceTrainer.Train(f'--input={unprocessed_file} --model_prefix=sentencepiece --vocab_size=32000')
+    
+    sp = spm.SentencePieceProcessor()
 
 
 if __name__ == "__main__":

@@ -19,6 +19,18 @@ from nltk.translate.bleu_score import sentence_bleu
 
 from special_tokens import PAD_WORD, EOS_WORD, BOS_WORD
 
+
+def patch_source(source):
+    source = source.transpose(0, 1)
+    return source
+
+
+def patch_target(target):
+    target = target.transpose(0, 1)
+    gold = target[:, 1:]
+    target = target[:, :-1]
+    return target, gold
+
 def load_model(opt, device):
 
     checkpoint = torch.load(opt.model, map_location=device)
@@ -54,16 +66,19 @@ def translation_score(pred_seq,ends,gold,TRG):
         target_line = target_line.replace(special_tokens.BOS_WORD, '').replace(special_tokens.EOS_WORD, '').replace(special_tokens.PAD_WORD, '')
         bleu[0]+=sentence_bleu([list(target_line)],list(pred_line))
         bleu[1]+=1
+        # print(pred_line)
+        # print(target_line)
     return bleu
 
 def main():
     parser = argparse.ArgumentParser(description='translate.py')
 
-    parser.add_argument('-model', required=True,
+    parser.add_argument('-model',
                         help='Path to model weight file')
-    parser.add_argument('-data_pkl', required=True,
+    parser.add_argument('-data_pkl',
                         help='Pickle file with both instances and vocabulary.')
-    parser.add_argument('-test_data', default=None)  # bpe encoded data
+    parser.add_argument('-train_data', default='newstest2014.tok.clean.bpe.32000')  # bpe encoded data
+    parser.add_argument('-val_data', default='newstest2014.tok.clean.bpe.32000')
 
     parser.add_argument('-output', default='pred.txt',
                         help="""Path to output the predictions (each line will
@@ -73,21 +88,21 @@ def main():
     parser.add_argument('-no_cuda', action='store_true')
 
     opts = parser.parse_args()
+    opts.no_cuda= False
     opts.cuda = not opts.no_cuda
     device = torch.device('cuda' if opts.cuda else 'cpu')
+    opts.batch_size=1
+    opts.model='model.chkpt'
+    test_loader, validation_data,SRC,TRG = load_data_dict(opts, device)
 
-    data = pickle.load(open(opts.data_pkl, 'rb'))
-    SRC, TRG = data['vocab']['src'], data['vocab']['trg']
     opts.src_pad_idx = SRC.vocab.stoi[PAD_WORD]
     opts.trg_pad_idx = TRG.vocab.stoi[PAD_WORD]
     opts.trg_bos_idx = TRG.vocab.stoi[BOS_WORD]
     opts.trg_eos_idx = TRG.vocab.stoi[EOS_WORD]
     unk_idx = SRC.vocab.stoi[SRC.unk_token]
-
-    test_loader = Dataset(examples=data['test'], fields={'src': SRC, 'trg': TRG})
-
+    model=load_model(opts, device)
     translator = Translator(
-        model=load_model(opts, device),
+        model=model,
         beam_size=opts.beam_size,
         max_seq_len=opts.max_seq_len,
         src_pad_idx=opts.src_pad_idx,
@@ -98,13 +113,22 @@ def main():
 
     total_bleu, total_sentence = 0, 0
     for example in tqdm(test_loader, mininterval=2, desc='  - (Test)', leave=False):
-        # print(' '.join(example.src))
-        src_seq = [SRC.vocab.stoi.get(word, unk_idx) for word in example.src]
-        trg_seq=[TRG.vocab.stoi.get(word, unk_idx) for word in example.trg]
-        gold=torch.LongTensor([trg_seq[1:]]).to(device)
-        pred_seq, ends = translator.translate_sentence(torch.LongTensor([src_seq]).to(device))
+        source_sequence = patch_source(example.src).to(device)
+        target_sequence, gold = map(lambda x: x.to(device), patch_target(example.trg))
+        prediction = model(source_sequence,target_sequence[:,:2])
+        output = model.generator(prediction)
+        # print(torch.argmax(output[0],dim=1))
+        pred_seq, ends = translator.translate_sentence(source_sequence)
         bleu = translation_score(pred_seq, ends, gold, TRG)
+        print(bleu[0])
         total_bleu += bleu[0]
         total_sentence += bleu[1]
     bleu_score = total_bleu / total_sentence
     print('BLEU score for model: ',bleu_score)
+
+
+if __name__ == "__main__":
+    '''
+    Usage: python translate.py -model trained.chkpt -data multi30k.pt -no_cuda
+    '''
+    main()

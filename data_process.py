@@ -170,27 +170,26 @@ def load_vocab(lang_extension):
 def load_data_dict(opts, device):
     en_field = Field(
         tokenize=str.split,
-        pad_token=PAD_WORD,
         unk_token=UNK_WORD,
-        eos_token=EOS_WORD,
-        init_token=BOS_WORD
+        pad_token=PAD_WORD,
+        init_token=BOS_WORD,
+        eos_token=EOS_WORD
 
     )
     de_field = Field(
         tokenize=str.split,
-        pad_token=PAD_WORD,
         unk_token=UNK_WORD,
-        eos_token=EOS_WORD,
-        init_token=BOS_WORD
-
+        pad_token=PAD_WORD,
+        init_token=BOS_WORD,
+        eos_token=EOS_WORD
     )
     fields = (en_field, de_field)
     print('Loading en vocab')
     en_vocab = load_vocab('en')
-    en_field.vocab = en_field.vocab_cls(en_vocab, specials=[PAD_WORD, UNK_WORD, EOS_WORD])
+    en_field.vocab = en_field.vocab_cls(en_vocab, specials=[UNK_WORD, PAD_WORD, BOS_WORD, EOS_WORD])
     print('Loading de vocab')
     de_vocab = load_vocab('de')
-    de_field.vocab = de_field.vocab_cls(de_vocab, specials=[PAD_WORD, UNK_WORD, EOS_WORD])
+    de_field.vocab = de_field.vocab_cls(de_vocab, specials=[UNK_WORD, PAD_WORD, BOS_WORD, EOS_WORD])
     print('Loading data')
     training = load_data(opts.train_data, fields, opts.batch_size, device, train=True)
     print('Training data loaded')
@@ -203,6 +202,14 @@ def load_data_dict(opts, device):
     opts.trg_pad_idx = de_field.vocab.stoi[PAD_WORD]
     opts.trg_bos_idx = de_field.vocab.stoi[BOS_WORD]
     opts.trg_eos_idx = de_field.vocab.stoi[EOS_WORD]
+    print(opts.trg_pad_idx,'pad')
+    print(opts.trg_bos_idx,'bos')
+    print(opts.trg_eos_idx,'eos')
+    print(de_field.vocab.stoi[UNK_WORD],'unk')
+    print(en_field.vocab.stoi[PAD_WORD],'pad')
+    print(en_field.vocab.stoi[BOS_WORD],'bos')
+    print(en_field.vocab.stoi[EOS_WORD],'eos')
+    print(en_field.vocab.stoi[UNK_WORD],'unk')
     opts.src_vocab_size = len(en_field.vocab)
     opts.trg_vocab_size = len(de_field.vocab)
     return training, val, en_field,de_field

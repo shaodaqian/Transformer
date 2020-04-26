@@ -100,33 +100,20 @@ def subword(zipped, langs, args, merge_ops=32000):
                 f2.write(bpe.process_line(line))
 
 
-def endepreprocessing(args):
-    _, _, CORPORA = get_data_urls_and_filenames('en-de')
+def get_unprocessed_corpora(langs):
+    assert(len(langs) == 2)
+    _, _, CORPORA = get_data_urls_and_filenames(f'{langs[0]}-{langs[1]}')
     data = {}
-    for lang in ['en', 'de']:
-        print(f'Processing {lang}')
-        full_set_file = f'{lang}-train-full'
-        full_set_filepath = os.path.join(UNPROCESSED_FOLDER, full_set_file)
-        if not os.path.exists(full_set_filepath):
-            for corp in CORPORA:
-                filename = os.path.join(UNPROCESSED_FOLDER, f'{corp}.{lang}')
-                print(f'Loading {corp}')
-                with open(filename, 'r', encoding='utf-8') as f:
-                    data[lang] += f.readlines()
-            print(f'Saving to {full_set_file}')
-            with open(full_set_filepath, 'w', encoding='utf-8') as f:
-                f.writelines(data[lang])
-        else:
-            with open(full_set_filepath, 'r', encoding='utf-8') as f:
-                data[lang] = f.readlines()
-    print('Tokenizing')
-    en, de = tokenize('en', data['en']), tokenize('de', data['de'])
-    print('Cleaning')
-    zipped = clean_corpus(en, de)
-    # Byte-pair encoding
-    print('Byte-pair encodings')
-    subword(zipped, ['en', 'de'], args)
-    print('Done')
+    for lang in langs:
+        for corp in CORPORA:
+            filename = os.path.join(UNPROCESSED_FOLDER, f'{corp}.{lang}')
+            print(f'Loading {corp}')
+            with open(filename, 'r', encoding='utf-8') as f:
+                data[lang] += f.readlines()
+    return data
+
+
+
 
 
 def load_data(filename, fields, batch_size, device, train):
@@ -202,20 +189,20 @@ def load_data_dict(opts, device):
     opts.trg_pad_idx = de_field.vocab.stoi[PAD_WORD]
     opts.trg_bos_idx = de_field.vocab.stoi[BOS_WORD]
     opts.trg_eos_idx = de_field.vocab.stoi[EOS_WORD]
-    print(opts.trg_pad_idx,'pad')
-    print(opts.trg_bos_idx,'bos')
-    print(opts.trg_eos_idx,'eos')
-    print(de_field.vocab.stoi[UNK_WORD],'unk')
-    print(en_field.vocab.stoi[PAD_WORD],'pad')
-    print(en_field.vocab.stoi[BOS_WORD],'bos')
-    print(en_field.vocab.stoi[EOS_WORD],'eos')
-    print(en_field.vocab.stoi[UNK_WORD],'unk')
+    # print(opts.trg_pad_idx,'pad')
+    # print(opts.trg_bos_idx,'bos')
+    # print(opts.trg_eos_idx,'eos')
+    # print(de_field.vocab.stoi[UNK_WORD],'unk')
+    # print(en_field.vocab.stoi[PAD_WORD],'pad')
+    # print(en_field.vocab.stoi[BOS_WORD],'bos')
+    # print(en_field.vocab.stoi[EOS_WORD],'eos')
+    # print(en_field.vocab.stoi[UNK_WORD],'unk')
     opts.src_vocab_size = len(en_field.vocab)
     opts.trg_vocab_size = len(de_field.vocab)
     return training, val, en_field,de_field
 
 
-def reduce_dataset(dataset_name, out_name, langs, keep_every=100):
+def reduce_dataset(dataset_name, out_name, langs, keep_every):
     # Reduces a dataset by a factor of keep_every
     for lang in langs:
         infile = os.path.join(PROCESSED_FOLDER, f'{dataset_name}.{lang}')
@@ -226,16 +213,29 @@ def reduce_dataset(dataset_name, out_name, langs, keep_every=100):
                     new.write(line)
 
 
+def endepreprocessing(args):
+    data = get_unprocessed_corpora(['en', 'de'])
+    print('Tokenizing')
+    en, de = tokenize('en', data['en']), tokenize('de', data['de'])
+    print('Cleaning')
+    zipped = clean_corpus(en, de)
+    # Byte-pair encoding
+    print('Byte-pair encodings')
+    subword(zipped, ['en', 'de'], args)
+    print('Done')
 
 
 # en-fr: 32000 word-piece vocab: Google’s neural machine translation system: Bridging the gap between human and machine translation (2016)
 # https://arxiv.org/pdf/1609.08144.pdf
 def enfrpreprocessing(args):
+    data = get_unprocessed_corpora(['en', 'fr'])
     concatenate_files()
     unprocessed_file = os.path.join(UNPROCESSED_FOLDER, 'enfrconcatenated')
     spm.SentencePieceTrainer.Train(f'--input={unprocessed_file} --model_prefix=sentencepiece --vocab_size=32000')
 
     sp = spm.SentencePieceProcessor()
+
+
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ import torch.optim as optim
 
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
-from model.transformer import build_transformer
+from model.transformer import build_transformer, TransformerParallel
 from data_process import load_data_dict, endepreprocessing
 from data_download import download_data
 
@@ -44,7 +44,7 @@ def main():
 
     parser.add_argument('-log', default='log')
     parser.add_argument('-save_model', default='latest')
-    parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='latest')
+    parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
 
     parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-label_smoothing', action='store_true', default=False)
@@ -52,7 +52,7 @@ def main():
     parser.add_argument('-download_data', action='store_true')
     parser.add_argument('-preprocess_data', action='store_true')
 
-    parser.add_argument('-bf', '--bleu_freq', default=25)
+    parser.add_argument('-bf', '--bleu_freq', type=int, default=25)
 
     args = parser.parse_args()
 
@@ -86,7 +86,8 @@ def main():
         num_layers=args.n_layers,
         num_attention_layers=args.n_head,
         dropout=args.dropout
-    ).to(device)
+    )
+    transformer = TransformerParallel(transformer)
     # Adam optimizer; hyperparameters as specified in Attention Is All You Need
     optimizer = ScheduledOptim(
         optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),

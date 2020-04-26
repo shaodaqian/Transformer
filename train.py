@@ -5,13 +5,8 @@ import torch.optim as optim
 import argparse, time
 from tqdm import tqdm
 import math
-from model.translator import Translator
+from model.translator import Translator, TranslatorParallel
 from translate import translation_score
-
-
-# class TransformerParallel(torch.nn.DataParallel):
-#     def __getattr__(self, name):
-#         return getattr(self.module, name)
 
 
 def patch_source(source):
@@ -71,14 +66,15 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
             trg_bos_idx=args.trg_bos_idx,
             trg_eos_idx=args.trg_eos_idx,
             device=device
-        ).to(device)
+        )
+        translator = TranslatorParallel(translator)
         # translator = CustomDataParallel(translator)
     for batch in tqdm(data, mininterval=0.5, desc=desc, leave=False):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
-        # source_sequence = CustomDataParallel(patch_source(batch.src))
-        # target_sequence, gold = map(lambda x: CustomDataParallel(x), patch_target(batch.trg))
+        # source_sequence = nn.DataParallel(patch_source(batch.src))
+        # target_sequence, gold = map(lambda x: nn.DataParallel(x), patch_target(batch.trg))
         # forward pass
         if training:
             optimizer.zero_grad()
@@ -129,7 +125,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
     "Utility function for printing performance at a given time."
     def get_performance_string(epoch, loss, accu, start_time, bleu=None):
         ppl = math.exp(min(loss, 100))
-        elapse = time.time()-start_time / 60
+        elapse = (time.time()-start_time) / 60
         accu = 100*accu
         perf = f'e: {epoch}, ppl: {ppl: 8.3f}, accuracy: {accu:3.2f}%, elapse: {elapse:3.2f} min\n'
         if bleu is not None:
@@ -151,7 +147,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             smoothing=args.label_smoothing
         )
         # start = time.time()
-        if epoch_number%bleu_freq ==(bleu_freq-1):
+        if epoch_number % bleu_freq == (bleu_freq - 1):
             cal_bleu=True
         validation_loss, validation_accuracy, bleu_score = run_one_epoch(
             model,

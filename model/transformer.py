@@ -27,6 +27,17 @@ def subsequent_mask(seq):
     return subsequent
 
 
+class TransformerParallel(torch.nn.DataParallel):
+    def generator(self, prediction):
+        return self.module.generator(prediction)
+
+    def encode(self, *args):
+        return self.module.encode(*args)
+
+    def decode(self, *args):
+        return self.module.decode(*args)
+
+
 class Transformer(nn.Module):
     def __init__(self, encoder, decoder, output_generator, source_embedding, target_embedding, trg_pad_idx, src_pad_idx):
         super().__init__()

@@ -10,14 +10,11 @@ from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
 from model.transformer import build_transformer
 from model.translator import Translator
-from special_tokens import PAD_WORD,BOS_WORD,EOS_WORD,UNK_WORD
+from special_tokens import PAD_WORD, BOS_WORD, EOS_WORD, UNK_WORD
 
 from data_process import load_data_dict
 import special_tokens
 from nltk.translate.bleu_score import sentence_bleu
-
-
-from special_tokens import PAD_WORD, EOS_WORD, BOS_WORD
 
 
 def patch_source(source):
@@ -30,6 +27,7 @@ def patch_target(target):
     gold = target[:, 1:]
     target = target[:, :-1]
     return target, gold
+
 
 def load_model(opt, device):
 
@@ -69,6 +67,7 @@ def translation_score(pred_seq,ends,gold,TRG):
         # print(pred_line)
         # print(target_line)
     return bleu
+
 
 def main():
     parser = argparse.ArgumentParser(description='translate.py')
@@ -116,7 +115,7 @@ def main():
         source_sequence = patch_source(example.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(example.trg))
         prediction = model(source_sequence,target_sequence[:,:2])
-        output = model.generator(prediction)
+        # output = model.generator(prediction)
         # print(torch.argmax(output[0],dim=1))
         pred_seq, ends = translator.translate_sentence(source_sequence)
         bleu = translation_score(pred_seq, ends, gold, TRG)

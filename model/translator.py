@@ -9,6 +9,11 @@ import copy
 import numpy as np
 
 
+class TranslatorParallel(nn.DataParallel):
+    def translate_sentence(self, *args):
+        return self.module.translate_sentence(*args)
+
+
 class Translator(nn.Module):
     def __init__(
             self, model, beam_size, max_seq_len,

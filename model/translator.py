@@ -19,11 +19,12 @@ class TranslatorParallel(nn.DataParallel):
 class Translator(nn.Module):
     def __init__(
             self, model, beam_size, max_seq_len,
-            src_pad_idx, trg_pad_idx, trg_bos_idx, trg_eos_idx,device):
+            src_pad_idx, trg_pad_idx, trg_bos_idx, trg_eos_idx,device, alpha=0.6):
 
         super(Translator, self).__init__()
 
-        self.alpha = 0.6
+        self.alpha = alpha
+        print(self.alpha)
         self.beam_size = beam_size
         self.max_seq_len = max_seq_len
         self.src_pad_idx = src_pad_idx

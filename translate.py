@@ -85,6 +85,7 @@ def main():
                         help="""Path to output the predictions (each line will
                         be the decoded sequence""")
     parser.add_argument('-beam_size', type=int, default=4)
+    parser.add_argument('-alpha', type=float, default=0.6)
     parser.add_argument('-max_seq_len', type=int, default=100)
     parser.add_argument('-cuda', action='store_true')
 
@@ -108,7 +109,8 @@ def main():
         trg_pad_idx=opts.trg_pad_idx,
         trg_bos_idx=opts.trg_bos_idx,
         trg_eos_idx=opts.trg_eos_idx,
-        device=device).to(device)
+        device=device,
+        alpha=opts.alpha).to(device)
 
     total_bleu, total_sentence = 0, 0
     for example in tqdm(test_loader, mininterval=2, desc='  - (Test)', leave=False):

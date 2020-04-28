@@ -53,12 +53,12 @@ def load_model(opt, device):
     return model
 
 
-def translation_score(pred_seq,gold,TRG):
+def translation_score(pred_seq,ends,gold,TRG):
     bleu=[0,0]
     # bleu[0] is total bleu score, bleu[1] number of sentences
     # print(pred_seq.shape[0],gold.shape[0])
-    for i in range(pred_seq.shape[0]):
-        current=pred_seq[i]
+    for i in range(len(pred_seq)):
+        current=pred_seq[i][:ends[i]]
         pred_line = ' '.join(TRG.vocab.itos[idx] for idx in current)
         pred_line = pred_line.replace(special_tokens.BOS_WORD, '').replace(special_tokens.EOS_WORD, '').replace(special_tokens.PAD_WORD, '')
         target=gold[i]
@@ -120,8 +120,10 @@ def main():
         # prediction = model(source_sequence,target_sequence[:,:2])
         # output = model.generator(prediction)
         # print(torch.argmax(output[0],dim=1))
-        pred_seq = translator.greedy_decoder(source_sequence)
-        bleu = translation_score(pred_seq, gold, TRG)
+        pred_seq,ends = translator.translate_sentence(source_sequence)
+        # pred_seq = translator.greedy_decoder(source_sequence)
+
+        bleu = translation_score(pred_seq,ends, gold, TRG)
         total_bleu += bleu[0]
         total_sentence += bleu[1]
         bleu_score = total_bleu / total_sentence

@@ -74,7 +74,7 @@ def translation_score(pred_seq,ends,gold,TRG):
 def main():
     parser = argparse.ArgumentParser(description='translate.py')
 
-    parser.add_argument('-model',
+    parser.add_argument('-model', default='latest.chkpt',
                         help='Path to model weight file')
     parser.add_argument('-data_pkl',
                         help='Pickle file with both instances and vocabulary.')
@@ -86,15 +86,12 @@ def main():
                         be the decoded sequence""")
     parser.add_argument('-beam_size', type=int, default=4)
     parser.add_argument('-max_seq_len', type=int, default=100)
-    parser.add_argument('-no_cuda', action='store_true')
+    parser.add_argument('-cuda', action='store_true')
 
     opts = parser.parse_args()
-    opts.no_cuda= True
-    opts.cuda = not opts.no_cuda
     device = torch.device('cuda' if opts.cuda else 'cpu')
     print(device)
     opts.batch_size=1
-    opts.model='latest.chkpt'
     test_loader, validation_data,SRC,TRG = load_data_dict(opts, device)
 
     opts.src_pad_idx = SRC.vocab.stoi[PAD_WORD]

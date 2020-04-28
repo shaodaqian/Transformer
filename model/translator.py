@@ -2,6 +2,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
+
 from model.transformer import Transformer, subsequent_mask
 from model.transformer import src_mask as pad_mask
 from nltk.translate.bleu_score import sentence_bleu
@@ -39,7 +41,7 @@ class Translator(nn.Module):
         self.register_buffer('init_seq', torch.LongTensor([[trg_bos_idx]]))
         self.register_buffer(
             'blank_seqs',
-            torch.full((beam_size, max_seq_len), trg_pad_idx, dtype=torch.long))
+            torch.full((beam_size, 1), trg_pad_idx, dtype=torch.long))
         self.blank_seqs[:, 0] = self.trg_bos_idx
         # self.register_buffer(
         #     'len_map',
@@ -61,7 +63,8 @@ class Translator(nn.Module):
         best_k_probs, best_k_idx = dec_output[:, -1, :].topk(beam_size)
         scores = best_k_probs.view(beam_size)
         gen_seq = copy.deepcopy(self.blank_seqs)
-        gen_seq[:, 1] = best_k_idx[0]
+        gen_seq = torch.cat([gen_seq, best_k_idx[0]], dim=1)
+
         enc_output = enc_output.repeat(beam_size, 1, 1)
         return enc_output, gen_seq, scores
 
@@ -90,7 +93,7 @@ class Translator(nn.Module):
         gen_seq[:, :step] = gen_seq[best_k_r_idxs, :step]
         # Set the best tokens in this beam search step
         # print(best_k2_idx[best_k_r_idxs, best_k_c_idxs])
-        gen_seq[:, step] = best_k2_idx[best_k_r_idxs, best_k_c_idxs]
+        gen_seq = torch.cat([gen_seq, best_k2_idx[best_k_r_idxs, best_k_c_idxs]], dim=1)
         return gen_seq, scores
 
     def translate_sentence(self, source_sequence):
@@ -118,13 +121,30 @@ class Translator(nn.Module):
                     # -- check if all beams contain eos
                     # print(eos_locs.sum())
                     end=step
-                    if (eos_locs.sum(1) > 0).sum(0).item() == beam_size:
+                    if (eos_locs.sum(1) > 1).sum(0).item() == beam_size & step>60:
+                        # print(gen_seq)
                         seq_len=torch.argmax(eos_locs.int().to(self.device),dim=1)
                         _, ans_idx = scores.div(seq_len.float().to(self.device) ** alpha).max(0)
                         ans_idx = ans_idx.item()
                         end=torch.argmax(eos_locs[ans_idx].int().to(self.device))
                         break
-                # print(gen_seq)
+                print(gen_seq)
+                print(end)
             ans.append(gen_seq[ans_idx].tolist())
             ends.append(end)
         return torch.tensor(ans),ends
+
+    def greedy_decoder(self, source_sequence):
+        src_pad_idx, trg_eos_idx, trg_bos_idx = self.src_pad_idx, self.trg_eos_idx, self.trg_bos_idx
+        max_seq_len, beam_size, alpha = self.max_seq_len, self.beam_size, self.alpha
+        src_mask = pad_mask(source_sequence, src_pad_idx)
+        memory = self.model.encode(source_sequence, src_mask)
+        ys = torch.full((1, 1),trg_bos_idx,dtype=torch.long)
+        for i in range (max_seq_len-1):
+            out = self.model.decode(ys,memory, src_mask, subsequent_mask(ys))
+            prob = self.model.generator(out[:, -1])
+            _, next_word = torch.max(prob, dim=1)
+            next_word = next_word.data[0]
+            ys = torch.cat([ys,torch.ones(1, 1).type(torch.LongTensor).fill_(next_word)], dim=1)
+
+        return ys

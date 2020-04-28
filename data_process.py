@@ -189,14 +189,14 @@ def load_data_dict(opts, device):
     opts.trg_pad_idx = de_field.vocab.stoi[PAD_WORD]
     opts.trg_bos_idx = de_field.vocab.stoi[BOS_WORD]
     opts.trg_eos_idx = de_field.vocab.stoi[EOS_WORD]
-    # print(opts.trg_pad_idx,'pad')
-    # print(opts.trg_bos_idx,'bos')
-    # print(opts.trg_eos_idx,'eos')
-    # print(de_field.vocab.stoi[UNK_WORD],'unk')
-    # print(en_field.vocab.stoi[PAD_WORD],'pad')
-    # print(en_field.vocab.stoi[BOS_WORD],'bos')
-    # print(en_field.vocab.stoi[EOS_WORD],'eos')
-    # print(en_field.vocab.stoi[UNK_WORD],'unk')
+    print(opts.trg_pad_idx,'pad')
+    print(opts.trg_bos_idx,'bos')
+    print(opts.trg_eos_idx,'eos')
+    print(de_field.vocab.stoi[UNK_WORD],'unk')
+    print(en_field.vocab.stoi[PAD_WORD],'pad')
+    print(en_field.vocab.stoi[BOS_WORD],'bos')
+    print(en_field.vocab.stoi[EOS_WORD],'eos')
+    print(en_field.vocab.stoi[UNK_WORD],'unk')
     opts.src_vocab_size = len(en_field.vocab)
     opts.trg_vocab_size = len(de_field.vocab)
     return training, val, en_field,de_field

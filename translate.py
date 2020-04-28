@@ -8,7 +8,7 @@ import torch.optim as optim
 
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
-from model.transformer import build_transformer
+from model.transformer import build_transformer,TransformerParallel
 from model.translator import Translator
 from special_tokens import PAD_WORD, BOS_WORD, EOS_WORD, UNK_WORD
 
@@ -46,17 +46,19 @@ def load_model(opt, device):
         num_attention_layers=model_opt.n_head,
         dropout=model_opt.dropout).to(device)
 
+    model = TransformerParallel(model)
+
     model.load_state_dict(checkpoint['model'])
     print('[Info] Trained model state loaded.')
     return model
 
 
-def translation_score(pred_seq,ends,gold,TRG):
+def translation_score(pred_seq,gold,TRG):
     bleu=[0,0]
     # bleu[0] is total bleu score, bleu[1] number of sentences
     # print(pred_seq.shape[0],gold.shape[0])
     for i in range(pred_seq.shape[0]):
-        current=pred_seq[i][:ends[i]]
+        current=pred_seq[i]
         pred_line = ' '.join(TRG.vocab.itos[idx] for idx in current)
         pred_line = pred_line.replace(special_tokens.BOS_WORD, '').replace(special_tokens.EOS_WORD, '').replace(special_tokens.PAD_WORD, '')
         target=gold[i]
@@ -87,18 +89,19 @@ def main():
     parser.add_argument('-no_cuda', action='store_true')
 
     opts = parser.parse_args()
-    opts.no_cuda= False
+    opts.no_cuda= True
     opts.cuda = not opts.no_cuda
     device = torch.device('cuda' if opts.cuda else 'cpu')
+    print(device)
     opts.batch_size=1
-    opts.model='model.chkpt'
+    opts.model='latest.chkpt'
     test_loader, validation_data,SRC,TRG = load_data_dict(opts, device)
 
     opts.src_pad_idx = SRC.vocab.stoi[PAD_WORD]
     opts.trg_pad_idx = TRG.vocab.stoi[PAD_WORD]
     opts.trg_bos_idx = TRG.vocab.stoi[BOS_WORD]
     opts.trg_eos_idx = TRG.vocab.stoi[EOS_WORD]
-    unk_idx = SRC.vocab.stoi[SRC.unk_token]
+    opts.trg_unk_idx = TRG.vocab.stoi[UNK_WORD]
     model=load_model(opts, device)
     translator = Translator(
         model=model,
@@ -114,15 +117,15 @@ def main():
     for example in tqdm(test_loader, mininterval=2, desc='  - (Test)', leave=False):
         source_sequence = patch_source(example.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(example.trg))
-        prediction = model(source_sequence,target_sequence[:,:2])
+        # prediction = model(source_sequence,target_sequence[:,:2])
         # output = model.generator(prediction)
         # print(torch.argmax(output[0],dim=1))
-        pred_seq, ends = translator.translate_sentence(source_sequence)
-        bleu = translation_score(pred_seq, ends, gold, TRG)
-        print(bleu[0])
+        pred_seq = translator.greedy_decoder(source_sequence)
+        bleu = translation_score(pred_seq, gold, TRG)
         total_bleu += bleu[0]
         total_sentence += bleu[1]
-    bleu_score = total_bleu / total_sentence
+        bleu_score = total_bleu / total_sentence
+        print(bleu_score)
     print('BLEU score for model: ',bleu_score)
 
 

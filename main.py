@@ -22,7 +22,7 @@ from special_tokens import PAD_WORD
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-experiment_name', default=None) 
+    parser.add_argument('-experiment_name', default=None, required=True) 
 
     parser.add_argument('-epoch', type=int, default=10)
     parser.add_argument('-b', '--batch_size', type=int, default=2048)
@@ -51,7 +51,7 @@ def main():
 
     parser.add_argument('-data_reduce_size', type=int, default=500000)
 
-    parser.add_argument('-langs', nargs='+')
+    parser.add_argument('-langs', nargs='+', required=True)
 
     args = parser.parse_args()
 

@@ -2,7 +2,6 @@ import torch
 import argparse
 import math
 import time
-import dill as pickle
 from tqdm import tqdm
 import torch.optim as optim
 
@@ -76,42 +75,46 @@ def main():
                         help='Path to model weight file')
     parser.add_argument('-data_pkl',
                         help='Pickle file with both instances and vocabulary.')
-    parser.add_argument('-train_data', default='newstest2014.tok.clean.bpe.32000')  # bpe encoded data
-    parser.add_argument('-val_data', default='newstest2014.tok.clean.bpe.32000')
-
+    parser.add_argument('-experiment_name', required=True)
     parser.add_argument('-output', default='pred.txt',
                         help="""Path to output the predictions (each line will
                         be the decoded sequence""")
     parser.add_argument('-beam_size', type=int, default=4)
-    parser.add_argument('-max_seq_len', type=int, default=100)
-    parser.add_argument('-no_cuda', action='store_true')
+    parser.add_argument('-batch_size', type=int, default=16)
+    parser.add_argument('-max_seq_len', type=int, default=130)
+    parser.add_argument('device', choices=['cpu', 'cuda'], default='cuda')
+    parser.add_argument('-langs', nargs='+', required=True)
 
-    opts = parser.parse_args()
-    opts.no_cuda= False
-    opts.cuda = not opts.no_cuda
-    device = torch.device('cuda' if opts.cuda else 'cpu')
-    opts.batch_size=1
-    opts.model='model.chkpt'
-    test_loader, validation_data,SRC,TRG = load_data_dict(opts, device)
+    args = parser.parse_args()
+    device = torch.device(args.device)
+    args.model='model.chkpt'
+    test_loader, SRC, TRG = load_data_dict(
+        experiment_name=args.experiment_name,
+        corpora_type='dev',
+        langs=args.langs,
+        args=args,
+        device=device
+    )
 
-    opts.src_pad_idx = SRC.vocab.stoi[PAD_WORD]
-    opts.trg_pad_idx = TRG.vocab.stoi[PAD_WORD]
-    opts.trg_bos_idx = TRG.vocab.stoi[BOS_WORD]
-    opts.trg_eos_idx = TRG.vocab.stoi[EOS_WORD]
+    args.src_pad_idx = SRC.vocab.stoi[PAD_WORD]
+    args.trg_pad_idx = TRG.vocab.stoi[PAD_WORD]
+    args.trg_bos_idx = TRG.vocab.stoi[BOS_WORD]
+    args.trg_eos_idx = TRG.vocab.stoi[EOS_WORD]
     unk_idx = SRC.vocab.stoi[SRC.unk_token]
-    model=load_model(opts, device)
+    model=load_model(args, device)
     translator = Translator(
         model=model,
-        beam_size=opts.beam_size,
-        max_seq_len=opts.max_seq_len,
-        src_pad_idx=opts.src_pad_idx,
-        trg_pad_idx=opts.trg_pad_idx,
-        trg_bos_idx=opts.trg_bos_idx,
-        trg_eos_idx=opts.trg_eos_idx,
-        device=device).to(device)
+        beam_size=args.beam_size,
+        max_seq_len=args.max_seq_len,
+        src_pad_idx=args.src_pad_idx,
+        trg_pad_idx=args.trg_pad_idx,
+        trg_bos_idx=args.trg_bos_idx,
+        trg_eos_idx=args.trg_eos_idx,
+        device=device
+    ).to(device)
 
     total_bleu, total_sentence = 0, 0
-    for example in tqdm(test_loader, mininterval=2, desc='  - (Test)', leave=False):
+    for example in tqdm(test_loader, mininterval=5, desc='  - (Test)', leave=False):
         source_sequence = patch_source(example.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(example.trg))
         prediction = model(source_sequence,target_sequence[:,:2])

@@ -7,6 +7,8 @@ from tqdm import tqdm
 import math
 from model.translator import Translator, TranslatorParallel
 from translate import translation_score
+from datetime import datetime
+import os
 
 
 def patch_source(source):
@@ -69,7 +71,7 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
         )
         translator = TranslatorParallel(translator)
         # translator = CustomDataParallel(translator)
-    for batch in tqdm(data, mininterval=0.5, desc=desc, leave=False):
+    for batch in tqdm(data, mininterval=10, desc=desc, leave=False):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
@@ -127,7 +129,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
         ppl = math.exp(min(loss, 100))
         elapse = (time.time()-start_time) / 60
         accu = 100*accu
-        perf = f'e: {epoch}, ppl: {ppl: 8.3f}, accuracy: {accu:3.2f}%, elapse: {elapse:3.2f} min\n'
+        perf = f'e: {epoch}, ppl: {ppl: 8.3f}, accuracy: {accu:3.2f}%, elapse: {elapse:3.2f} min, time of finish: {datetime.fromtimestamp(time.time())}\n'
         if bleu is not None:
             perf += f'BLEU: {bleu}\n'
         return perf
@@ -172,6 +174,12 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
                     min_val_loss = validation_loss
                     torch.save(checkpoint, model_name)
                     print('    - [Info] The checkpoint file has been updated.')
+            elif args.save_mode == 'last-5':
+                model_name = f'{args.save_model}-{epoch_number}.chkpt'
+                torch.save(checkpoint, model_name)
+                if epoch_number >= 5:
+                    oldest_model_name = f'{args.save_model}-{epoch_number-5}.chkpt'
+                    os.remove(oldest_model_name)
 
         "Optionally log the training/validation step."
         if log_train_file and log_valid_file:

@@ -1,9 +1,9 @@
 import os
 import urllib.request
 import tarfile
-
-
-UNPROCESSED_FOLDER = './data/unprocessed'
+from data_files import get_data_files, get_data_urls, DOWNLOADS_FOLDER, UNPROCESSED_FOLDER
+import gzip
+import shutil
 
 
 def download_file(response, file_path, file_size):
@@ -21,85 +21,40 @@ def download_file(response, file_path, file_size):
             f.write(buffer)
             progress = file_size_dl * 100. / file_size
             if int(progress * 20) % 20 == 0:
-                print(f'{file_size_dl}  [{progress:.0f}%]')
+                print(f'{file_size_dl//(1024*1024)} MB  [{progress:.0f}%]')
 
 
-def get_data_urls_and_filenames(task):
-    if task == 'en-de':
-        URLS = [
-            "http://statmt.org/wmt13/training-parallel-europarl-v7.tgz",
-            "http://statmt.org/wmt13/training-parallel-commoncrawl.tgz",
-            "http://data.statmt.org/wmt17/translation-task/training-parallel-nc-v12.tgz",
-            "http://data.statmt.org/wmt17/translation-task/dev.tgz",
-            "http://statmt.org/wmt14/test-full.tgz",
-        ]
-        FILES = [
-            "training-parallel-europarl-v7",
-            "training-parallel-commoncrawl",
-            "training-parallel-nc-v12",
-            "dev",
-            "test-full",
-        ]
-        CORPORA = [
-            "training/europarl-v7.de-en",
-            "commoncrawl.de-en",
-            "training/news-commentary-v12.de-en",
-        ]
-    elif task == 'en-fr':
-        URLS = [
-            "http://statmt.org/wmt13/training-parallel-europarl-v7.tgz",
-            "http://statmt.org/wmt13/training-parallel-commoncrawl.tgz",
-            "http://statmt.org/wmt13/training-parallel-un.tgz",
-            "http://statmt.org/wmt14/training-parallel-nc-v9.tgz",
-            "http://statmt.org/wmt10/training-giga-fren.tar",
-            "http://statmt.org/wmt14/test-full.tgz",
-        ]
-        FILES = [
-            "training-parallel-europarl-v7",
-            "training-parallel-commoncrawl",
-            "training-parallel-un",
-            "training-parallel-nc-v9",
-            "training-giga-fren",
-            "test-full",
-        ]
-        CORPORA = [
-            "training/europarl-v7.fr-en",
-            "commoncrawl.fr-en",
-            "un/undoc.2000.fr-en",
-            "training/news-commentary-v9.fr-en",
-            "giga-fren.release2.fixed",
-        ]
-    else:
-        print(f'Unknown task {task}: only en-de and en-fr available.')
-        URLS = []
-        FILES = []
-        CORPORA = []
-    return URLS, FILES, CORPORA
-
-
-def download_data():
-    try:
-        os.mkdir(UNPROCESSED_FOLDER)
-    except FileExistsError:
-        print('Data folder exists')
-    URLS, FILES, _ = get_data_urls_and_filenames('en-de')
-    for i, url in enumerate(URLS):
-        filename = f'{FILES[i]}.tgz'
-        file_path = os.path.join(UNPROCESSED_FOLDER, filename)
+def download_data(task):
+    URLS = get_data_urls(task)
+    FILES = get_data_files(task)
+    for url, filepath in zip(URLS, FILES):
         # Download file
         with urllib.request.urlopen(url) as response:
             meta = response.info()
             file_size = int(meta.get("Content-Length"))
-            if os.path.exists(file_path) and int(os.stat(file_path).st_size) == file_size:
-                print(f'File {filename} exists, skipping download')
+            if os.path.exists(filepath) and int(os.stat(filepath).st_size) == file_size:
+                print(f'File {filepath} exists, skipping download')
             else:
-                print(f'Downloading: {filename} Bytes: {file_size}')
-                download_file(response, file_path, file_size)
-        # Unpack tgz file
-        with tarfile.open(file_path) as tar:
-            print(f'Extracting into {UNPROCESSED_FOLDER}')
-            tar.extractall(UNPROCESSED_FOLDER)
+                print(f'Downloading: {filepath}, {file_size//(1024*1024)} MB')
+                download_file(response, filepath, file_size)
+        # Unpack tgz files
+        if url == "http://statmt.org/wmt10/training-giga-fren.tar":
+            # Special case for tar file instead of tgz file.
+            with tarfile.open(filepath) as tar:
+                tar.extractall(DOWNLOADS_FOLDER)
+            packed = ["giga-fren.release2.fixed.en", "giga-fren.release2.fixed.fr"]
+            for filename in packed:
+                gz_filepath = os.path.join(DOWNLOADS_FOLDER, f'{filename}.gz')
+                extracted_filepath = os.path.join(UNPROCESSED_FOLDER, filename)
+                print(f'Extracting {gz_filepath}')
+                with gzip.open(gz_filepath, 'rb') as f_in, open(extracted_filepath, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+        else:
+            print(f'Extracting {filepath}')
+            with tarfile.open(filepath) as tar:
+                tar.extractall(UNPROCESSED_FOLDER)
 
 
 if __name__ == '__main__':
-    download_data()
+    download_data(['en', 'fr'])
+    download_data(['en', 'de'])

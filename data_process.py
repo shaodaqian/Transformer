@@ -191,15 +191,15 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
             size=reduce_size
         )
     
-
-    with open(f'{fp}en', 'r', encoding='utf-8') as f:
-        total_tokens = 0
-        for line in f.readlines():
-            total_tokens += len(line.split())
-        print('Total tokens: ', total_tokens)
+    total_tokens = 0
+    for lang in langs:
+        with open(f'{fp}{lang}', 'r', encoding='utf-8') as f:
+            for line in f.readlines():
+                total_tokens += len(line.split())
 
     def batch_size_fn(example, current_count, current_size):
         current_size += len(example.src)
+        current_size += len(example.trg)
         return current_size
     data = BucketIterator(
         TranslationDataset(
@@ -267,7 +267,6 @@ def load_data_dict(experiment_name, langs, corpora_type, args, device, src_field
         corpora_type=corpora_type,
         reduce_size=args.data_reduce_size
     )
-
     return data, total_tokens, src_field, trg_field
 
 

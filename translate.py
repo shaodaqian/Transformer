@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
-from model.transformer import build_transformer
+from model.transformer import build_transformer,TransformerParallel
 from model.translator import Translator
 from special_tokens import PAD_WORD, BOS_WORD, EOS_WORD, UNK_WORD
 
@@ -45,6 +45,8 @@ def load_model(opt, device):
         num_attention_layers=model_opt.n_head,
         dropout=model_opt.dropout).to(device)
 
+    model = TransformerParallel(model)
+
     model.load_state_dict(checkpoint['model'])
     print('[Info] Trained model state loaded.')
     return model
@@ -54,7 +56,7 @@ def translation_score(pred_seq,ends,gold,TRG):
     bleu=[0,0]
     # bleu[0] is total bleu score, bleu[1] number of sentences
     # print(pred_seq.shape[0],gold.shape[0])
-    for i in range(pred_seq.shape[0]):
+    for i in range(len(pred_seq)):
         current=pred_seq[i][:ends[i]]
         pred_line = ' '.join(TRG.vocab.itos[idx] for idx in current)
         pred_line = pred_line.replace(special_tokens.BOS_WORD, '').replace(special_tokens.EOS_WORD, '').replace(special_tokens.PAD_WORD, '')
@@ -71,7 +73,7 @@ def translation_score(pred_seq,ends,gold,TRG):
 def main():
     parser = argparse.ArgumentParser(description='translate.py')
 
-    parser.add_argument('-model',
+    parser.add_argument('-model', default='latest.chkpt',
                         help='Path to model weight file')
     parser.add_argument('-data_pkl',
                         help='Pickle file with both instances and vocabulary.')
@@ -82,7 +84,8 @@ def main():
     parser.add_argument('-beam_size', type=int, default=4)
     parser.add_argument('-batch_size', type=int, default=16)
     parser.add_argument('-max_seq_len', type=int, default=130)
-    parser.add_argument('device', choices=['cpu', 'cuda'], default='cuda')
+    parser.add_argument('-alpha', type=float, default=0.6)
+    parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-langs', nargs='+', required=True)
 
     args = parser.parse_args()
@@ -100,8 +103,8 @@ def main():
     args.trg_pad_idx = TRG.vocab.stoi[PAD_WORD]
     args.trg_bos_idx = TRG.vocab.stoi[BOS_WORD]
     args.trg_eos_idx = TRG.vocab.stoi[EOS_WORD]
-    unk_idx = SRC.vocab.stoi[SRC.unk_token]
-    model=load_model(args, device)
+    args.trg_unk_idx = TRG.vocab.stoi[UNK_WORD]
+    model = load_model(args, device)
     translator = Translator(
         model=model,
         beam_size=args.beam_size,
@@ -110,22 +113,25 @@ def main():
         trg_pad_idx=args.trg_pad_idx,
         trg_bos_idx=args.trg_bos_idx,
         trg_eos_idx=args.trg_eos_idx,
-        device=device
+        device=device,
+        alpha=args.alpha
     ).to(device)
 
     total_bleu, total_sentence = 0, 0
     for example in tqdm(test_loader, mininterval=5, desc='  - (Test)', leave=False):
         source_sequence = patch_source(example.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(example.trg))
-        prediction = model(source_sequence,target_sequence[:,:2])
+        # prediction = model(source_sequence,target_sequence[:,:2])
         # output = model.generator(prediction)
         # print(torch.argmax(output[0],dim=1))
-        pred_seq, ends = translator.translate_sentence(source_sequence)
-        bleu = translation_score(pred_seq, ends, gold, TRG)
-        print(bleu[0])
+        pred_seq,ends = translator.translate_sentence(source_sequence)
+        # pred_seq = translator.greedy_decoder(source_sequence)
+
+        bleu = translation_score(pred_seq,ends, gold, TRG)
         total_bleu += bleu[0]
         total_sentence += bleu[1]
-    bleu_score = total_bleu / total_sentence
+        bleu_score = total_bleu / total_sentence
+        print(bleu_score)
     print('BLEU score for model: ',bleu_score)
 
 

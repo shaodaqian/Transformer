@@ -100,7 +100,24 @@ def get_dev_data_corpora(langs):
         corpora = "test-full/newstest2014-deen-src"
     elif langs == ['en', 'fr']:
         corpora = "test-full/newstest2014-fren-src"
-    filepaths = [os.path.join(UNPROCESSED_FOLDER, f'{corpora}.{lang}.sgm') for lang in langs]
+    sgm_filepaths = [os.path.join(UNPROCESSED_FOLDER, f'{corpora}.{lang}.sgm') for lang in langs]
+    filepaths = [os.path.join(UNPROCESSED_FOLDER, f'{corpora}.{lang}') for lang in langs]
+    def clean_sgm_file(sgm_file, clean_file):
+        with open(sgm_file, 'r', encoding='utf-8') as in_file, open(clean_file, 'w', encoding='utf-8') as out_file:
+            for line in in_file.readlines():
+                clean_line = ""
+                ignore = False
+                for char in line:
+                    if char == '<':
+                        ignore = True
+                    elif char == '>':
+                        ignore = False
+                    if not ignore:
+                        clean_line += char
+                out_file.write(clean_line)
+                out_file.write('\n')
+    for sgm_filepath, filepath in zip(sgm_filepaths, filepaths):
+        clean_sgm_file(sgm_filepath, filepath)
     return filepaths
 
 

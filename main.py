@@ -38,8 +38,7 @@ def main():
     parser.add_argument('-proj_share_weight', action='store_true')
 
     parser.add_argument('-log', default='log')
-    parser.add_argument('-save_model', default='latest')
-    parser.add_argument('-save_mode', type=str, choices=['all', 'best'], default='best')
+    parser.add_argument('-save_mode', type=str, choices=['all', 'best, last_5'], default='last_5')
 
     parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-label_smoothing', action='store_true', default=False)
@@ -55,16 +54,12 @@ def main():
 
     args = parser.parse_args()
 
-    args.max_token_seq_len = 80
-
     device = torch.device(args.device)
     args.beam_size=4
-    args.max_seq_len=80
+    args.max_seq_len=130
     # ========= Loading Dataset =========#
     # if args.download_data:
     #     download_data()
-    # if args.preprocess_data:
-    #     endepreprocessing(args)
 
     training_data, src_field, trg_field = load_data_dict(
         experiment_name=args.experiment_name,

@@ -27,6 +27,7 @@ class DataCleaner:
             with open(tok_filepaths[0], 'r', encoding='utf-8') as f0, open(tok_filepaths[1], 'r', encoding='utf-8') as f1:
                 for line0, line1 in zip(f0.readlines(), f1.readlines()):
                     yield line0.split(), line1.split()
+        print('Cleaning')
         corpuses = get_corpuses()
         corpuses = self.remove_empty_lines(corpuses)
         corpuses = self.remove_redundant_spaces(corpuses)
@@ -102,10 +103,7 @@ class BytePairPipeline:
             self.moses_tokenize(lang, datapaths[i], tokenized_filepaths[i], overwrite=overwrite)
         cleaned_filepaths = [get_cleaned_path(self.file_prefix, lang) for lang in langs]
         DataCleaner(tok_filepaths=tokenized_filepaths, cleaned_filepaths=cleaned_filepaths, overwrite=overwrite)
-        # Concatenated file necessary for BPE
-        concatenated_filepath = get_concat_path(self.file_prefix)
-        concatenate_files(cleaned_filepaths, concatenated_filepath, overwrite=overwrite)
-        self.subword(concatenated_filepath, cleaned_filepaths=cleaned_filepaths, overwrite=overwrite)
+        self.subword(cleaned_filepaths=cleaned_filepaths, overwrite=overwrite)
 
     def moses_tokenize(self, lang, datapath, tokpath, overwrite):
         if os.path.exists(tokpath) and overwrite == False:
@@ -127,6 +125,9 @@ class BytePairPipeline:
     def subword(self, concatenated_filepath, cleaned_filepaths, overwrite):
         bpe_filepath = get_bpe_path(self.experiment_name, self.merge_ops)
         if self.corpora_type == 'training':
+            # Concatenated file necessary for BPE learning
+            concatenated_filepath = get_concat_path(self.file_prefix)
+            concatenate_files(cleaned_filepaths, concatenated_filepath, overwrite=overwrite)
             if os.path.exists(bpe_filepath) and overwrite == False:
                 print(bpe_filepath, 'already exists')
             else:
@@ -328,7 +329,7 @@ if __name__ == "__main__":
         langs=['en', 'fr'],
         experiment_name='bpe_enfr',
         corpora_type='training',
-        overwrite=True,
+        overwrite=False,
         merge_ops=32000
     )
     BytePairPipeline(
@@ -345,20 +346,20 @@ if __name__ == "__main__":
         overwrite=True,
         merge_ops=32000
     )
-    ende_sp = SentencePieceWrapper(
-        langs=['en', 'de'],
-        experiment_name='sp_ende',
-        overwrite=True
-    )
-    ende_sp.tokenize(
-        corpora_type='training',
-        overwrite=True
-    )
-    ende_sp.tokenize(
-        corpora_type='test',
-        overwrite=True
-    )
-    ende_sp.tokenize(
-        corpora_type='dev',
-        overwrite=True
-    )
+    # ende_sp = SentencePieceWrapper(
+    #     langs=['en', 'de'],
+    #     experiment_name='sp_ende',
+    #     overwrite=True
+    # )
+    # ende_sp.tokenize(
+    #     corpora_type='training',
+    #     overwrite=True
+    # )
+    # ende_sp.tokenize(
+    #     corpora_type='test',
+    #     overwrite=True
+    # )
+    # ende_sp.tokenize(
+    #     corpora_type='dev',
+    #     overwrite=True
+    # )

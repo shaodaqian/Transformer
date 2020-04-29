@@ -174,7 +174,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
                     min_val_loss = validation_loss
                     torch.save(checkpoint, model_name)
                     print('    - [Info] The checkpoint file has been updated.')
-            elif args.save_mode == 'last-5':
+            elif args.save_mode == 'last_5':
                 model_name = f'{args.save_model}-{epoch_number}.chkpt'
                 torch.save(checkpoint, model_name)
                 if epoch_number >= 5:

@@ -122,7 +122,7 @@ class BytePairPipeline:
             raise ValueError()
 
     # Byte-pair encoding (aka subword)
-    def subword(self, concatenated_filepath, cleaned_filepaths, overwrite):
+    def subword(self, cleaned_filepaths, overwrite):
         bpe_filepath = get_bpe_path(self.experiment_name, self.merge_ops)
         if self.corpora_type == 'training':
             # Concatenated file necessary for BPE learning
@@ -190,6 +190,10 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
             langs=langs,
             size=reduce_size
         )
+
+    def batch_size_fn(example, current_count, current_size):
+        current_size += len(example.src)
+        return current_size
     data = BucketIterator(
         TranslationDataset(
             exts=langs,
@@ -197,6 +201,7 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
             path=fp
         ),
         batch_size=batch_size,
+        batch_size_fn=batch_size_fn,
         device=device,
         train=train,
         sort=True,

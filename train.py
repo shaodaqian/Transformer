@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import argparse, time
+from torchtext.data import BucketIterator
 from tqdm import tqdm
 import math
 from model.translator import Translator, TranslatorParallel
@@ -71,7 +72,9 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
         )
         translator = TranslatorParallel(translator)
         # translator = CustomDataParallel(translator)
-    for batch in tqdm(data, mininterval=10, desc=desc, leave=False):
+
+
+    for batch in tqdm(data, mininterval=10, desc=desc, leave=False, total=args.data_reduce_size//args.batch_size):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))

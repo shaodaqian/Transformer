@@ -83,7 +83,7 @@ def main():
                         be the decoded sequence""")
     parser.add_argument('-beam_size', type=int, default=4)
     parser.add_argument('-batch_size', type=int, default=16)
-    parser.add_argument('-max_seq_len', type=int, default=130)
+    parser.add_argument('-max_seq_len', type=int, default=1000)
     parser.add_argument('-alpha', type=float, default=0.6)
     parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-langs', nargs='+', required=True)
@@ -118,7 +118,8 @@ def main():
     ).to(device)
 
     total_bleu, total_sentence = 0, 0
-    for example in tqdm(test_loader, mininterval=5, desc='  - (Test)', leave=False):
+    bleu_score = 0
+    for example in tqdm(test_loader, mininterval=20, desc='  - (Test)', leave=False):
         source_sequence = patch_source(example.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(example.trg))
         # prediction = model(source_sequence,target_sequence[:,:2])
@@ -130,9 +131,9 @@ def main():
         bleu = translation_score(pred_seq,ends, gold, TRG)
         total_bleu += bleu[0]
         total_sentence += bleu[1]
-        bleu_score = total_bleu / total_sentence
-        print(bleu_score)
-    print('BLEU score for model: ',bleu_score)
+
+    bleu_score = (total_bleu / total_sentence) * 100
+    print('BLEU score for model: ', bleu_score)
 
 
 if __name__ == "__main__":

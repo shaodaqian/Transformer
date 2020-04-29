@@ -107,13 +107,15 @@ def get_dev_data_corpora(langs):
             for line in in_file.readlines():
                 clean_line = ""
                 ignore = False
+                last_char = ''
                 for char in line:
                     if char == '<':
                         ignore = True
-                    elif char == '>':
+                    elif last_char == '>':
                         ignore = False
                     if not ignore:
                         clean_line += char
+                    last_char = char
                 out_file.write(clean_line)
                 out_file.write('\n')
     for sgm_filepath, filepath in zip(sgm_filepaths, filepaths):

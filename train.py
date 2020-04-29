@@ -164,21 +164,21 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             min_val_loss = validation_loss
         checkpoint = {'epoch': epoch_number, 'settings': args, 'model': model.state_dict()}
         "Optionally save the model."
-        if args.save_model:
+        if args.experiment_name:
             if args.save_mode == 'all':
-                model_name = f'{args.save_model}_accu_{validation_accuracy:3.3f}.chkpt'
+                model_name = f'{args.experiment_name}_accu_{validation_accuracy:3.3f}.chkpt'
                 torch.save(checkpoint, model_name)
             elif args.save_mode == 'best':
-                model_name = f'{args.save_model}.chkpt'
+                model_name = f'{args.experiment_name}.chkpt'
                 if validation_loss <= min_val_loss:
                     min_val_loss = validation_loss
                     torch.save(checkpoint, model_name)
                     print('    - [Info] The checkpoint file has been updated.')
             elif args.save_mode == 'last_5':
-                model_name = f'{args.save_model}-{epoch_number}.chkpt'
+                model_name = f'{args.experiment_name}-{epoch_number}.chkpt'
                 torch.save(checkpoint, model_name)
                 if epoch_number >= 5:
-                    oldest_model_name = f'{args.save_model}-{epoch_number-5}.chkpt'
+                    oldest_model_name = f'{args.experiment_name}-{epoch_number-5}.chkpt'
                     os.remove(oldest_model_name)
 
         "Optionally log the training/validation step."

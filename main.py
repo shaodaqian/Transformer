@@ -38,7 +38,7 @@ def main():
     parser.add_argument('-proj_share_weight', action='store_true')
 
     parser.add_argument('-log', default='log')
-    parser.add_argument('-save_mode', type=str, choices=['all', 'best, last_5'], default='last_5')
+    parser.add_argument('-save_mode', type=str, choices=['all', 'best', 'last_5'], default='last_5')
 
     parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-label_smoothing', action='store_true', default=False)

@@ -190,6 +190,13 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
             langs=langs,
             size=reduce_size
         )
+    
+
+    with open(f'{fp}en', 'r', encoding='utf-8') as f:
+        total_tokens = 0
+        for line in f.readlines():
+            total_tokens += len(line.split())
+        print('Total tokens: ', total_tokens)
 
     def batch_size_fn(example, current_count, current_size):
         current_size += len(example.src)
@@ -207,7 +214,7 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
         sort=True,
         shuffle=False,
     )
-    return data
+    return data, total_tokens
 
 
 def load_vocab(vocab_filepath):
@@ -251,7 +258,7 @@ def load_data_dict(experiment_name, langs, corpora_type, args, device, src_field
         args.trg_vocab_size = len(trg_field.vocab)
 
     print('Loading data')
-    data = load_data(
+    data, total_tokens = load_data(
         experiment_name=experiment_name,
         langs=langs,
         fields=fields,
@@ -261,7 +268,7 @@ def load_data_dict(experiment_name, langs, corpora_type, args, device, src_field
         reduce_size=args.data_reduce_size
     )
 
-    return data, src_field, trg_field
+    return data, total_tokens, src_field, trg_field
 
 
 class SentencePieceWrapper:

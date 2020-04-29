@@ -61,14 +61,14 @@ def main():
     # if args.download_data:
     #     download_data()
 
-    training_data, src_field, trg_field = load_data_dict(
+    training_data, total_training_tokens, src_field, trg_field = load_data_dict(
         experiment_name=args.experiment_name,
         langs=args.langs,
         corpora_type='training',
         args=args,
         device=device
     )
-    dev_data, _, _ = load_data_dict(
+    dev_data, total_dev_tokens, _, _ = load_data_dict(
         experiment_name=args.experiment_name,
         langs=args.langs,
         corpora_type='dev',
@@ -107,7 +107,9 @@ def main():
         device=device,
         SRC=src_field,
         TRG=trg_field,
-        bleu_freq=args.bleu_freq
+        bleu_freq=args.bleu_freq,
+        total_training_tokens=total_training_tokens,
+        total_dev_tokens=total_dev_tokens
     )
 
 

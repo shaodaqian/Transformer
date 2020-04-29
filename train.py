@@ -49,7 +49,7 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
     return loss
 
 
-def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False, bleu=False):
+def run_one_epoch(model, data, args, device,TRG, total_tokens, optimizer=None, smoothing=False, bleu=False):
     ''' Epoch operation in training phase'''
     training = optimizer is not None
     total_loss, total_num_words, total_num_correct_words, total_bleu,total_sentence = 0, 0, 0, 0,0
@@ -74,7 +74,7 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
         # translator = CustomDataParallel(translator)
 
 
-    for batch in tqdm(data, mininterval=10, desc=desc, leave=False, total=args.data_reduce_size//args.batch_size):
+    for batch in tqdm(data, mininterval=10, desc=desc, leave=False, total=total_tokens//args.batch_size):
         # prepare data
         source_sequence = patch_source(batch.src).to(device)
         target_sequence, gold = map(lambda x: x.to(device), patch_target(batch.trg))
@@ -115,7 +115,7 @@ def run_one_epoch(model, data, args, device,TRG, optimizer=None, smoothing=False
     
 
 
-def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG,bleu_freq):
+def train(model, training_data, validation_data, optimizer, args, device, SRC, TRG, bleu_freq, total_training_tokens, total_dev_tokens):
     ''' Start training '''
     log_train_file, log_valid_file = None, None
     "We can optionally log the training and validation processes."
@@ -148,6 +148,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             args,
             device,
             TRG,
+            total_tokens=total_training_tokens,
             optimizer=optimizer,
             smoothing=args.label_smoothing
         )
@@ -160,6 +161,7 @@ def train(model, training_data, validation_data, optimizer, args, device,SRC,TRG
             args,
             device,
             TRG,
+            total_tokens=total_dev_tokens,
             optimizer=None,
             bleu=cal_bleu
         )

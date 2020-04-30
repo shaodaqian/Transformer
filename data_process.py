@@ -190,17 +190,23 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
             langs=langs,
             size=reduce_size
         )
-    
-    total_tokens = 0
-    for lang in langs:
-        with open(f'{fp}{lang}', 'r', encoding='utf-8') as f:
-            for line in f.readlines():
-                total_tokens += len(line.split())
 
-    def batch_size_fn(example, current_count, current_size):
-        current_size += len(example.src)
-        current_size += len(example.trg)
-        return current_size
+    if train:
+        total_tokens = 0
+        for lang in langs:
+            with open(f'{fp}{lang}', 'r', encoding='utf-8') as f:
+                for line in f.readlines():
+                    total_tokens += len(line.split())
+        def batch_size_fn(example, current_count, current_size):
+            current_size += len(example.src)
+            current_size += len(example.trg)
+            return current_size
+        batch_size_f = batch_size_fn
+    else:
+        batch_size_f = None
+        with open(f'{fp}en', 'r', encoding='utf-8') as f:
+            total_tokens = len(f.readlines())
+
     data = BucketIterator(
         TranslationDataset(
             exts=langs,
@@ -208,7 +214,7 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
             path=fp
         ),
         batch_size=batch_size,
-        batch_size_fn=batch_size_fn,
+        batch_size_fn=batch_size_f,
         device=device,
         train=train,
         sort=True,

@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
-from model.transformer import build_transformer, TransformerParallel
+from model.transformer import build_transformer
 from model.translator import Translator
 from special_tokens import PAD_WORD, BOS_WORD, EOS_WORD, UNK_WORD
 
@@ -42,8 +42,7 @@ def load_model(model_path, device):
         num_layers=model_opt.n_layers,
         num_attention_layers=model_opt.n_head,
         dropout=model_opt.dropout
-    )
-    model = TransformerParallel(model)
+    ).to(device)
     model.load_state_dict(checkpoint['model'])
     print('[Info] Trained model state loaded.')
     return model
@@ -140,7 +139,8 @@ def main():
         bleu = translation_score(pred_seq, ends, gold, TRG)
         total_bleu += bleu[0]
         total_sentence += bleu[1]
-
+        bleu_score = (total_bleu / total_sentence) * 100
+        print('\n', bleu_score)
     bleu_score = (total_bleu / total_sentence) * 100
     print('BLEU score for model: ', bleu_score)
 

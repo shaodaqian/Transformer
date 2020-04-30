@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from model.Optim import ScheduledOptim
 from torchtext.data import Field, Dataset, BucketIterator
-from model.transformer import build_transformer
+from model.transformer import build_transformer, TransformerParallel
 from model.translator import Translator
 from special_tokens import PAD_WORD, BOS_WORD, EOS_WORD, UNK_WORD
 
@@ -42,7 +42,8 @@ def load_model(model_path, device):
         num_layers=model_opt.n_layers,
         num_attention_layers=model_opt.n_head,
         dropout=model_opt.dropout
-    ).to(device)
+    )
+    model = TransformerParallel(model)
     model.load_state_dict(checkpoint['model'])
     print('[Info] Trained model state loaded.')
     return model

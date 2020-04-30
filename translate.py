@@ -96,8 +96,8 @@ def main():
             for name, param in model.named_parameters():
                 temp_params[name].data.copy_(param.data + temp_params[name].data)
             model.load_state_dict(temp_params)
-        for _, param in model.named_parameters():
-            param.data.copy_(param.data / len(args.model_numbers))
+    for _, param in model.named_parameters():
+        param.data.copy_(param.data / len(args.model_numbers))
 
     args.data_reduce_size = -1
     test_loader, total_tokens, SRC, TRG = load_data_dict(

@@ -79,7 +79,7 @@ def main():
                         be the decoded sequence""")
     parser.add_argument('-beam_size', type=int, default=4)
     parser.add_argument('-batch_size', type=int, default=1)
-    parser.add_argument('-max_seq_len', type=int, default=1000)
+    parser.add_argument('-max_seq_len', type=int, default=130)
     parser.add_argument('-alpha', type=float, default=0.6)
     parser.add_argument('-device', choices=['cpu', 'cuda'], default='cuda')
     parser.add_argument('-langs', nargs='+', required=True)

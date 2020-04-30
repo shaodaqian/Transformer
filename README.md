@@ -1,1 +1,1 @@
-# ML-Project
+This repository contains an implementation of the Transformer network introduced in the paper "Attention Is All You Need" (Vaswani et. al., 2017), as well as the code used for training and testing the model on several datasets.

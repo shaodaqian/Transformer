@@ -1,5 +1,4 @@
-
-from torchtext.data import Field, BucketIterator, Example, Dataset
+from torchtext.data import Field, BucketIterator
 from torchtext.datasets import TranslationDataset
 from sacremoses import MosesTokenizer
 from subword_nmt import learn_bpe, apply_bpe, get_vocab
@@ -7,12 +6,12 @@ import sentencepiece as spm
 import re
 import os
 from collections import Counter
-import io
-from numpy import random
 import shutil
 
 from special_tokens import PAD_WORD, UNK_WORD, EOS_WORD, BOS_WORD
-from data_files import reduce_dataset, get_training_data_corpora, get_dev_data_corpora, get_test_data_corpora, get_bpe_path, get_cleaned_path, get_concat_path, get_processed_data_path, get_tokenized_path, get_vocab_path, get_reduced_data_path
+from data_files import (reduce_dataset, get_training_data_corpora, get_dev_data_corpora, get_test_data_corpora,
+                        get_bpe_path, get_cleaned_path, get_concat_path, get_processed_data_path, get_tokenized_path,
+                        get_vocab_path)
 
 
 class DataCleaner:
@@ -23,8 +22,10 @@ class DataCleaner:
     """
     def __init__(self, tok_filepaths, cleaned_filepaths, overwrite):
         assert (len(tok_filepaths) == 2)
+
         def get_corpuses():
-            with open(tok_filepaths[0], 'r', encoding='utf-8') as f0, open(tok_filepaths[1], 'r', encoding='utf-8') as f1:
+            with open(tok_filepaths[0], 'r', encoding='utf-8') as f0, \
+                 open(tok_filepaths[1], 'r', encoding='utf-8') as f1:
                 for line0, line1 in zip(f0.readlines(), f1.readlines()):
                     yield line0.split(), line1.split()
         print('Cleaning')
@@ -37,7 +38,7 @@ class DataCleaner:
     def save(self, corpuses, cleaned_filepaths, overwrite):
         file_lang0 = cleaned_filepaths[0]
         file_lang1 = cleaned_filepaths[1]
-        if overwrite == False and os.path.exists(file_lang0) and os.path.exists(file_lang1):
+        if overwrite is False and os.path.exists(file_lang0) and os.path.exists(file_lang1):
             print(file_lang0, file_lang1, 'already exist')
             return
         with open(file_lang0, 'w', encoding='utf-8') as f0, open(file_lang1, 'w', encoding='utf-8') as f1:
@@ -53,13 +54,14 @@ class DataCleaner:
                 yield l1, l2
 
     def remove_redundant_spaces(self, corpuses):
-        regex = r' +' # 1 or more spaces
+        regex = r' +'  # 1 or more spaces
         for l1, l2 in corpuses:
             l1 = [re.sub(regex, ' ', word) for word in l1]
             l2 = [re.sub(regex, ' ', word) for word in l2]
             yield l1, l2
 
-    # drops lines (and their corresponding lines), that are empty, too short, too long or violate the 9-1 sentence ratio limit of GIZA++
+    # drops lines (and their corresponding lines), that are empty, too short,
+    # too long or violate the 9-1 sentence ratio limit of GIZA++
     def drop_lines(self, corpuses, min_length=1, max_length=80):
         for l1, l2 in corpuses:
             len1 = len(l1)
@@ -75,13 +77,13 @@ class DataCleaner:
 
 
 def concatenate_files(filepaths, concat_path, overwrite):
-    if os.path.exists(concat_path) and overwrite == False:
+    if os.path.exists(concat_path) and overwrite is False:
         print(concat_path, 'already exists')
         return
     with open(concat_path, 'w', encoding='utf-8') as f:
         for filepath in filepaths:
-            with open(filepath, 'r', encoding='utf-8') as l:
-                shutil.copyfileobj(l, f)
+            with open(filepath, 'r', encoding='utf-8') as file_to_concat:
+                shutil.copyfileobj(file_to_concat, f)
                 f.write('\n')
 
 
@@ -106,7 +108,7 @@ class BytePairPipeline:
         self.subword(cleaned_filepaths=cleaned_filepaths, overwrite=overwrite)
 
     def moses_tokenize(self, lang, datapath, tokpath, overwrite):
-        if os.path.exists(tokpath) and overwrite == False:
+        if os.path.exists(tokpath) and overwrite is False:
             print(tokpath, 'already exists.')
             return
         print('Tokenizing', tokpath)
@@ -128,12 +130,14 @@ class BytePairPipeline:
             # Concatenated file necessary for BPE learning
             concatenated_filepath = get_concat_path(self.file_prefix)
             concatenate_files(cleaned_filepaths, concatenated_filepath, overwrite=overwrite)
-            if os.path.exists(bpe_filepath) and overwrite == False:
+            if os.path.exists(bpe_filepath) and overwrite is False:
                 print(bpe_filepath, 'already exists')
             else:
                 print('Learning BPE encoding. This may take a while.')
-                with open(concatenated_filepath, 'r', encoding='utf-8') as infile, open(bpe_filepath, 'w', encoding='utf-8') as outfile:
-                    learn_bpe.learn_bpe(infile, outfile, num_symbols=self.merge_ops) # Get codecs, write codecs to outfile
+                with open(concatenated_filepath, 'r', encoding='utf-8') as infile, \
+                     open(bpe_filepath, 'w', encoding='utf-8') as outfile:
+                    # Get codecs, write codecs to outfile
+                    learn_bpe.learn_bpe(infile, outfile, num_symbols=self.merge_ops)
         print('Applying')
         with open(bpe_filepath, 'r', encoding='utf-8') as codec:
             bpe = apply_bpe.BPE(codec)
@@ -141,16 +145,17 @@ class BytePairPipeline:
         for i, lang in enumerate(self.langs):
             lang_filepath = cleaned_filepaths[i]
             processed_filepath = get_processed_data_path(self.experiment_name, self.corpora_type, lang)
-            if overwrite == False and os.path.exists(processed_filepath):
+            if overwrite is False and os.path.exists(processed_filepath):
                 continue
-            with open(lang_filepath, 'r', encoding='utf-8') as f1, open(processed_filepath, 'w', encoding='utf-8') as f2:
+            with open(lang_filepath, 'r', encoding='utf-8') as f1, \
+                 open(processed_filepath, 'w', encoding='utf-8') as f2:
                 for line in f1:
                     f2.write(bpe.process_line(line))
             if self.corpora_type == 'training':
                 vocab_filepath = get_vocab_path(self.experiment_name, lang)
-                with open(processed_filepath, 'r', encoding='utf-8') as train_file, open(vocab_filepath, 'w', encoding='utf-8') as vocab_file:
+                with open(processed_filepath, 'r', encoding='utf-8') as train_file, \
+                     open(vocab_filepath, 'w', encoding='utf-8') as vocab_file:
                     get_vocab.get_vocab(train_file, vocab_file)
-            
 
 
 def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, reduce_size):
@@ -197,10 +202,12 @@ def load_data(experiment_name, fields, langs, batch_size, device, corpora_type, 
             with open(f'{fp}{lang}', 'r', encoding='utf-8') as f:
                 for line in f.readlines():
                     total_tokens += len(line.split())
+
         def batch_size_fn(example, current_count, current_size):
             current_size += len(example.src)
             current_size += len(example.trg)
             return current_size
+
         batch_size_f = batch_size_fn
     else:
         batch_size_f = None
@@ -234,7 +241,7 @@ def load_vocab(vocab_filepath):
 
 
 def load_data_dict(experiment_name, langs, corpora_type, args, device, src_field=None, trg_field=None):
-    if src_field == None or trg_field == None:
+    if src_field is None or trg_field is None:
         src_field = Field(
             tokenize=str.split,
             unk_token=UNK_WORD,
@@ -292,7 +299,7 @@ class SentencePieceWrapper:
         full_data_paths = get_training_data_corpora(self.langs)
         concat_filepath = get_concat_path(self.experiment_name)
         concatenate_files(full_data_paths, concat_filepath, overwrite=overwrite)
-        if overwrite == True or not os.path.exists(f'{self.model_prefix}.model'):
+        if overwrite is True or not os.path.exists(f'{self.model_prefix}.model'):
             spm.SentencePieceTrainer.train((
                 f'--input={concat_filepath} --model_prefix={self.model_prefix} --vocab_size=32000 '
                 f'--pad_id=0 --unk_id=1 --bos_id=2 --eos_id=3 '
@@ -310,7 +317,7 @@ class SentencePieceWrapper:
             data_paths = get_dev_data_corpora(self.langs)
         tokenized_filepaths = [get_processed_data_path(self.experiment_name, corpora_type, lang) for lang in self.langs]
         for datapath, tokpath in zip(data_paths, tokenized_filepaths):
-            if overwrite == False and os.path.exists(tokpath):
+            if overwrite is False and os.path.exists(tokpath):
                 continue
             print('Tokenizing', datapath)
             with open(datapath, 'r', encoding='utf-8') as f_in, open(tokpath, 'w', encoding='utf-8') as f_out:

@@ -1,5 +1,4 @@
 import os
-import fileinput
 import numpy as np
 
 
@@ -102,6 +101,7 @@ def get_dev_data_corpora(langs):
         corpora = "test-full/newstest2014-fren-src"
     sgm_filepaths = [os.path.join(UNPROCESSED_FOLDER, f'{corpora}.{lang}.sgm') for lang in langs]
     filepaths = [os.path.join(UNPROCESSED_FOLDER, f'{corpora}.{lang}') for lang in langs]
+
     def clean_sgm_file(sgm_file, clean_file):
         with open(sgm_file, 'r', encoding='utf-8') as in_file, open(clean_file, 'w', encoding='utf-8') as out_file:
             for line in in_file.readlines():
@@ -135,23 +135,30 @@ def get_test_data_corpora(langs):
 def get_cleaned_path(prefix, lang):
     return os.path.join(CLEANED_FOLDER, f'{prefix}.{lang}')
 
+
 def get_tokenized_path(prefix, lang):
     return os.path.join(TOKENIZED_FOLDER, f'{prefix}.{lang}')
+
 
 def get_concat_path(prefix):
     return os.path.join(CLEANED_FOLDER, f'{prefix}_concat')
 
+
 def get_bpe_path(prefix, merge_ops):
     return os.path.join(PROCESSED_FOLDER, f'{prefix}.{merge_ops}')
+
 
 def get_vocab_path(experiment, lang):
     return os.path.join(PROCESSED_FOLDER, f'{experiment}_vocab.{lang}')
 
+
 def get_processed_data_path(experiment, corpora_type, lang):
     return os.path.join(PROCESSED_FOLDER, f'{experiment}_{corpora_type}.{lang}')
 
+
 def get_reduced_data_path(experiment, corpora_type, size, lang):
     return os.path.join(PROCESSED_FOLDER, f'{experiment}_{corpora_type}_reduced_{size}.{lang}')
+
 
 def reduce_dataset(experiment, corpora_type, langs, size):
     # Reduces a dataset by a factor of keep_every

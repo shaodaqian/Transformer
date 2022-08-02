@@ -50,8 +50,8 @@ class Translator(nn.Module):
 
     def _model_decode(self, trg_seq, enc_output, src_mask):
         trg_mask = subsequent_mask(trg_seq)
-        dec_output = self.model.decode(trg_seq, enc_output, src_mask,trg_mask)
-        output = self.model.generator(dec_output[:,-1])
+        dec_output = self.model.decode(trg_seq, enc_output, src_mask, trg_mask)
+        output = self.model.generator(dec_output[:, -1])
         return output
 
     def _get_init_state(self, src_seq, src_mask):
@@ -62,7 +62,7 @@ class Translator(nn.Module):
         # print(torch.argmax(dec_output[0][0]))
         # print(torch.max(dec_output[0][0]))
         # best_k_probs, best_k_idx = torch.topk(dec_output,1, dim=1)
-        best_k_probs, best_k_idx = torch.topk(dec_output,beam_size, dim=1)
+        best_k_probs, best_k_idx = torch.topk(dec_output, beam_size, dim=1)
 
         scores = best_k_probs[0]
         # print(scores)
@@ -79,7 +79,7 @@ class Translator(nn.Module):
 
         # Get k candidates for each beam, k^2 candidates in total.
         # torch.topk(dec_output[:, -1, :], beam_size)
-        best_k2_probs, best_k2_idx = torch.topk(dec_output, beam_size,dim=1)
+        best_k2_probs, best_k2_idx = torch.topk(dec_output, beam_size, dim=1)
         # Include the previous scores.
         scores = best_k2_probs.view(beam_size, -1) + scores.view(beam_size, 1)
         # Get the best k candidates from k^2 candidates.

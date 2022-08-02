@@ -1,22 +1,11 @@
 import torch
 import argparse
-import math
-import time
-from tqdm import tqdm
 import torch.optim as optim
 
 from model.Optim import ScheduledOptim
-from torchtext.data import Field, Dataset, BucketIterator
 from model.transformer import build_transformer, TransformerParallel
 from data_process import load_data_dict
-from data_download import download_data
-
 from train import train
-
-from special_tokens import PAD_WORD
-
-
-
 
 
 def main():
@@ -55,8 +44,8 @@ def main():
     args = parser.parse_args()
 
     device = torch.device(args.device)
-    args.beam_size=4
-    args.max_seq_len=130
+    args.beam_size = 4
+    args.max_seq_len = 130
     # ========= Loading Dataset =========#
     # if args.download_data:
     #     download_data()

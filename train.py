@@ -1,9 +1,6 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import argparse, time
-from torchtext.data import BucketIterator
+import time
 from tqdm import tqdm
 import math
 from model.translator import Translator, TranslatorParallel
@@ -49,10 +46,10 @@ def compute_loss(prediction, gold, trg_pad_idx, smoothing=False):
     return loss
 
 
-def run_one_epoch(model, data, args, device,TRG, total_tokens, optimizer=None, smoothing=False, bleu=False):
+def run_one_epoch(model, data, args, device, TRG, total_tokens, optimizer=None, smoothing=False, bleu=False):
     ''' Epoch operation in training phase'''
     training = optimizer is not None
-    total_loss, total_num_words, total_num_correct_words, total_bleu,total_sentence = 0, 0, 0, 0,0
+    total_loss, total_num_words, total_num_correct_words, total_bleu, total_sentence = 0, 0, 0, 0, 0
     if training:
         desc = '  - (Training)   '
         model.train()
@@ -72,7 +69,6 @@ def run_one_epoch(model, data, args, device,TRG, total_tokens, optimizer=None, s
         )
         translator = TranslatorParallel(translator)
         # translator = CustomDataParallel(translator)
-
 
     for batch in tqdm(data, mininterval=10, desc=desc, leave=False, total=total_tokens//args.batch_size):
         # prepare data
@@ -112,10 +108,11 @@ def run_one_epoch(model, data, args, device,TRG, total_tokens, optimizer=None, s
         return loss_per_word, accuracy, bleu_score
     else:
         return 0, 0, None
-    
 
 
-def train(model, training_data, validation_data, optimizer, args, device, SRC, TRG, bleu_freq, total_training_tokens, total_dev_tokens):
+def train(
+    model, training_data, validation_data, optimizer, args, device,
+    SRC, TRG, bleu_freq, total_training_tokens, total_dev_tokens):
     ''' Start training '''
     log_train_file, log_valid_file = None, None
     "We can optionally log the training and validation processes."
@@ -137,10 +134,9 @@ def train(model, training_data, validation_data, optimizer, args, device, SRC, T
             perf += f'BLEU: {bleu}\n'
         return perf
 
-
     for epoch_number in range(args.epoch):
         print('[ Epoch', epoch_number, ']')
-        cal_bleu=False
+        cal_bleu = False
         start_time = time.time()
         training_loss, training_accuracy, _ = run_one_epoch(
             model,
@@ -154,7 +150,7 @@ def train(model, training_data, validation_data, optimizer, args, device, SRC, T
         )
         # start = time.time()
         if epoch_number % bleu_freq == (bleu_freq - 1):
-            cal_bleu=True
+            cal_bleu = True
         validation_loss, validation_accuracy, bleu_score = run_one_epoch(
             model,
             validation_data,
@@ -191,5 +187,6 @@ def train(model, training_data, validation_data, optimizer, args, device, SRC, T
             with open(log_train_file, 'a') as log_tf, open(log_valid_file, 'a') as log_vf:
                 results = get_performance_string(epoch_number, training_loss, training_accuracy, start_time)
                 log_tf.write(results)
-                results = get_performance_string(epoch_number, validation_loss, validation_accuracy, start_time, bleu_score)
+                results = get_performance_string(
+                    epoch_number, validation_loss, validation_accuracy, start_time, bleu_score)
                 log_vf.write(results)
